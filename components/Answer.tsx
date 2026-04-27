@@ -81,28 +81,20 @@ function isRealDriveUrl(url: string | null | undefined): boolean {
 }
 
 /**
- * Resolve the right "open" URL + label for a document. Three paths:
- *   1. Support articles (filenames like `31035-math-academy-101.md`) →
- *      https://support.alpha.school/article/31035
- *   2. Real Drive URL → use it directly
- *   3. Otherwise → Drive search by filename so the user can hunt
+ * Resolve the right "open" URL for a document.
+ *   - Real Drive URL in the data → use it (this is the canonical case for
+ *     drive-sourced docs and the indexed support-article .md files)
+ *   - Otherwise (chat-only docs without Drive backing) → Drive search by
+ *     filename so the user can hunt for it
  */
 function resolveDocLink(
   filename: string,
   driveUrl: string | null | undefined,
 ): { url: string; label: string } {
-  const clean = cleanFilename(filename);
-  // Support article pattern: leading digits, then dash, .md extension
-  const articleMatch = clean.match(/^(\d+)-.*\.md$/i);
-  if (articleMatch) {
-    return {
-      url: `https://support.alpha.school/article/${articleMatch[1]}`,
-      label: "Open article →",
-    };
-  }
   if (isRealDriveUrl(driveUrl)) {
-    return { url: driveUrl!, label: "Open →" };
+    return { url: driveUrl!, label: "Open in Drive →" };
   }
+  const clean = cleanFilename(filename);
   const searchTerm = clean.replace(/\.[^/.]+$/, "");
   return {
     url: `https://drive.google.com/drive/search?q=${encodeURIComponent(
@@ -110,6 +102,19 @@ function resolveDocLink(
     )}`,
     label: "Find in Drive →",
   };
+}
+
+/**
+ * Some article markdown content has cross-references baked in as fake links
+ * like `[31035-math-academy-101.md](http://31035-math-academy-101.md)` —
+ * pseudo-URLs that go nowhere. Strip the link wrapper and keep just the text.
+ */
+function stripFakeMdLinks(text: string): string {
+  if (!text) return "";
+  return text.replace(
+    /\[([^\]]+\.md)\]\(http:\/\/[^)]+\.md\)/g,
+    "`$1`",
+  );
 }
 
 export function Answer({
@@ -206,10 +211,13 @@ function NodeCard({ node }: { node: MatchedNode }) {
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagText, setFlagText] = useState("");
   const [flagSent, setFlagSent] = useState(false);
-  const cleanBody = cleanContent(stripFrontmatter(node.body));
+  const cleanBody = stripFakeMdLinks(
+    cleanContent(stripFrontmatter(node.body)),
+  );
   const fallbackExcerpt = cleanBody.slice(0, 600);
   const cleanExcerpt =
-    cleanContent(stripFrontmatter(node.excerpt)) || fallbackExcerpt;
+    stripFakeMdLinks(cleanContent(stripFrontmatter(node.excerpt))) ||
+    fallbackExcerpt;
   const hasMore = cleanBody.length > cleanExcerpt.length + 5;
   const visible = expanded ? cleanBody : cleanExcerpt;
 
@@ -352,7 +360,9 @@ function DriCard({ dri, query }: { dri: MatchedNode; query: string }) {
 function DocContentQuote({ doc }: { doc: MatchedDocument }) {
   const cleanName = cleanFilename(doc.filename);
   const link = resolveDocLink(doc.filename, doc.drive_url);
-  const cleanedExcerpt = cleanContent(doc.content_excerpt ?? "");
+  const cleanedExcerpt = stripFakeMdLinks(
+    cleanContent(doc.content_excerpt ?? ""),
+  );
 
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
