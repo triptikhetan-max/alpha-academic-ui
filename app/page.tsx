@@ -20,7 +20,13 @@ export default async function HomePage() {
               · ask anything
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <a
+              href="/brain"
+              className="text-xs text-stone-500 hover:text-ink"
+            >
+              What's in the brain?
+            </a>
             <span className="text-xs text-stone-500 hidden md:inline">
               {session.user.email}
             </span>

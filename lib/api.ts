@@ -55,6 +55,21 @@ export async function ask(query: string): Promise<AskResponse> {
   return res.json();
 }
 
+export type HealthResponse = {
+  ok: boolean;
+  loaded: boolean;
+  generated_at: string | null;
+  nodes: Record<string, number>;
+  documents: number;
+  storage: { backend: string; redis_configured: boolean };
+};
+
+export async function health(): Promise<HealthResponse> {
+  const res = await fetch(`${API_URL}/health`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`health ${res.status}`);
+  return res.json();
+}
+
 export async function logFeedback(payload: {
   message: string;
   reported_by: string;
