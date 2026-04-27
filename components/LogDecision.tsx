@@ -10,7 +10,8 @@ export function LogDecision() {
   const [title, setTitle] = useState("");
   const [decision, setDecision] = useState("");
   const [rationale, setRationale] = useState("");
-  const [owner, setOwner] = useState("");
+  const [driName, setDriName] = useState("");
+  const [driEmail, setDriEmail] = useState("");
   const [decidedOn, setDecidedOn] = useState("");
   const [source, setSource] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -21,25 +22,46 @@ export function LogDecision() {
     setTitle("");
     setDecision("");
     setRationale("");
-    setOwner("");
+    setDriName("");
+    setDriEmail("");
     setDecidedOn("");
     setSource("");
     setSent(false);
     setError(null);
   }
 
+  function buildApprovalMailto(): string {
+    const subject =
+      `[Approval needed] ${mode === "new" ? "New decision" : "Update"}: ${title}`;
+    const body =
+      `Hi ${driName.split(" ")[0] || "there"},\n\n` +
+      `Someone on the Alpha Academic team proposed ${mode === "new" ? "a new decision" : "an update"} that's in your area of ownership and needs your sign-off before it goes into the team's brain.\n\n` +
+      `— — —\n` +
+      `Title: ${title}\n` +
+      `${mode === "new" ? "Decision" : "Change"}: ${decision}\n` +
+      (rationale ? `Why: ${rationale}\n` : "") +
+      (decidedOn ? `Decided on: ${decidedOn}\n` : "") +
+      (source ? `Source: ${source}\n` : "") +
+      `— — —\n\n` +
+      `Reply ✅ Approve, ❌ Reject, or ✏️ Modify (with the corrected version).\n\n` +
+      `Once you reply, Tripti will add this to the brain on the next weekly refresh.\n\n` +
+      `Thanks!\n`;
+    return `mailto:${driEmail}?cc=tripti.khetan@trilogy.com&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
   async function submit() {
-    if (!title.trim() || !decision.trim()) return;
+    if (!title.trim() || !decision.trim() || !driEmail.trim()) return;
     setSubmitting(true);
     setError(null);
     const message =
-      `[${mode === "new" ? "NEW DECISION" : "UPDATE TO DECISION"}] ${title}\n\n` +
-      `Decision: ${decision}\n` +
+      `[${mode === "new" ? "NEW DECISION (pending DRI approval)" : "UPDATE TO DECISION (pending DRI approval)"}] ${title}\n\n` +
+      `${mode === "new" ? "Decision" : "Change"}: ${decision}\n` +
       (rationale ? `Why: ${rationale}\n` : "") +
-      (owner ? `Owner / DRI: ${owner}\n` : "") +
+      `Pending approval from: ${driName || driEmail} <${driEmail}>\n` +
       (decidedOn ? `Decided on: ${decidedOn}\n` : "") +
       (source ? `Source: ${source}\n` : "");
     try {
+      // 1. Log the proposal to Tripti's weekly queue (status: pending DRI approval)
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,11 +72,15 @@ export function LogDecision() {
         }),
       });
       if (!res.ok) throw new Error(`API ${res.status}`);
+
+      // 2. Open the user's mail client with a pre-filled approval request to the DRI
+      window.location.href = buildApprovalMailto();
+
       setSent(true);
       setTimeout(() => {
         setOpen(false);
         reset();
-      }, 2000);
+      }, 3000);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -95,9 +121,13 @@ export function LogDecision() {
       </div>
 
       {sent ? (
-        <p className="text-sm text-green-700 py-3">
-          ✓ Saved. Tripti picks this up at the next weekly refresh.
-        </p>
+        <div className="text-sm text-green-700 py-3 space-y-1">
+          <p>✓ Logged to Tripti&apos;s queue and opening your email client.</p>
+          <p className="text-xs text-green-600">
+            Send the pre-filled approval request to {driName || driEmail}. Once
+            they reply with ✅, Tripti will add it to the brain on Monday.
+          </p>
+        </div>
       ) : (
         <>
           {/* Mode toggle */}
@@ -150,26 +180,42 @@ export function LogDecision() {
             onChange={setRationale}
             multiline
           />
+          <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-3">
+            <p className="text-xs text-stone-600">
+              <strong className="text-stone-800">DRI approval required.</strong>{" "}
+              The owner of this area gets a pre-filled email to approve, reject,
+              or modify. Tripti is cc&apos;d.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="DRI name"
+                placeholder="e.g. Julian Hernandez"
+                value={driName}
+                onChange={setDriName}
+              />
+              <Field
+                label="DRI email"
+                placeholder="julian@alpha.school"
+                value={driEmail}
+                onChange={setDriEmail}
+                required
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Owner / DRI"
-              placeholder="e.g. Julian Hernandez"
-              value={owner}
-              onChange={setOwner}
-            />
             <Field
               label="Decided on"
               placeholder="e.g. 2026-04-15 or 'Apr 15 standup'"
               value={decidedOn}
               onChange={setDecidedOn}
             />
+            <Field
+              label="Source"
+              placeholder="link to chat / doc / meeting"
+              value={source}
+              onChange={setSource}
+            />
           </div>
-          <Field
-            label="Source"
-            placeholder="link to chat / doc / meeting notes"
-            value={source}
-            onChange={setSource}
-          />
 
           {error && (
             <p className="text-xs text-red-600">Couldn&apos;t send: {error}</p>
@@ -187,10 +233,15 @@ export function LogDecision() {
             </button>
             <button
               onClick={submit}
-              disabled={!title.trim() || !decision.trim() || submitting}
+              disabled={
+                !title.trim() ||
+                !decision.trim() ||
+                !driEmail.trim() ||
+                submitting
+              }
               className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {submitting ? "Saving…" : "Send for weekly review"}
+              {submitting ? "Sending…" : "Send to DRI for approval"}
             </button>
           </div>
         </>
