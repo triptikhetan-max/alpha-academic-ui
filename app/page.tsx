@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ChatBox } from "@/components/ChatBox";
+import { LogDecision } from "@/components/LogDecision";
 
 export default async function HomePage() {
   const session = await auth();
@@ -93,17 +94,25 @@ export default async function HomePage() {
               or the policy. Plain English works.
             </p>
             <p>
-              <strong className="text-stone-700">If something's wrong:</strong>{" "}
-              click <em>Flag a gap</em> below any answer — it lands in Tripti's
-              gap log for the next refresh.
+              <strong className="text-stone-700">If something&apos;s wrong:</strong>{" "}
+              click <em>Suggest an edit</em> below any answer — it lands in
+              Tripti&apos;s weekly review log.
+            </p>
+            <p>
+              <strong className="text-stone-700">Made a new decision?</strong>{" "}
+              Use the <em>Log a decision or update</em> button below.
             </p>
             <p>
               See{" "}
               <a href="/brain" className="text-accent underline">
-                what's in the brain
+                what&apos;s in the brain
               </a>{" "}
               for the full structure.
             </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-stone-100">
+            <LogDecision />
           </div>
         </section>
 
