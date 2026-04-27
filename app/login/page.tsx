@@ -45,8 +45,8 @@ export default function LoginPage({
 
           <p className="text-xs text-stone-500 mt-6 leading-relaxed">
             Access restricted to Alpha-affiliated domains: alpha.school,
-            2hourlearning.com, trilogy.com, and a few more. If you're on the
-            academics team and can't sign in, ping Tripti.
+            2hourlearning.com, trilogy.com. If you&apos;re on the academics
+            team and can&apos;t sign in, ping Tripti.
           </p>
         </div>
 

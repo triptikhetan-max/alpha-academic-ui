@@ -11,9 +11,6 @@ const ALLOWED_DOMAINS = [
   "alpha.school",
   "2hourlearning.com",
   "trilogy.com",
-  "incept.ai",
-  "superbuilders.school",
-  "reachbeyond.ai",
 ];
 
 function emailIsAllowed(email: string | null | undefined): boolean {
