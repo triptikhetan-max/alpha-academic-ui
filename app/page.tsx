@@ -87,27 +87,49 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-500 leading-relaxed space-y-1">
+          <div className="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-500 leading-relaxed space-y-2">
             <p>
               <strong className="text-stone-700">How to ask well:</strong> be
               specific (Math 3-5, not math). Mention the subject, the platform,
               or the policy. Plain English works.
             </p>
-            <p>
-              <strong className="text-stone-700">If something&apos;s wrong:</strong>{" "}
-              click <em>Suggest an edit</em> below any answer — it lands in
-              Tripti&apos;s weekly review log.
-            </p>
-            <p>
-              <strong className="text-stone-700">Made a new decision?</strong>{" "}
-              Use the <em>Log a decision or update</em> button below.
-            </p>
+            <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3 space-y-1.5 text-stone-700">
+              <p>
+                <strong>How submissions work:</strong>
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-stone-600">
+                <li>
+                  <strong>🚩 Flag</strong> on a card or{" "}
+                  <strong>Suggest an edit</strong> below an answer →{" "}
+                  Tripti&apos;s weekly review log → goes live next Monday.
+                </li>
+                <li>
+                  <strong>🏛️ Log a decision or update</strong> (button below) →
+                  pre-filled approval email to the <strong>subject DRI</strong>
+                  {" "}(cc Tripti) → after they ✅, goes live next Monday.
+                </li>
+              </ul>
+            </div>
             <p>
               See{" "}
               <a href="/brain" className="text-accent underline">
                 what&apos;s in the brain
               </a>{" "}
               for the full structure.
+            </p>
+            <p>
+              <strong className="text-stone-700">
+                Want the Claude Code plugin?
+              </strong>{" "}
+              For power users who want to query from their terminal or VS
+              Code. Ping{" "}
+              <a
+                href="mailto:tripti.khetan@trilogy.com?subject=Alpha%20Academic%20plugin%20access"
+                className="text-accent underline"
+              >
+                Tripti
+              </a>{" "}
+              for the install + API key.
             </p>
           </div>
 
