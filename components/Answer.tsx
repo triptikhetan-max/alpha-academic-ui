@@ -207,7 +207,9 @@ function Section({
 }
 
 function NodeCard({ node }: { node: MatchedNode }) {
-  const [expanded, setExpanded] = useState(false);
+  // Default-expanded when there's no summary (so users still see content);
+  // default-collapsed when there IS a summary (summary is the headline).
+  const [expanded, setExpanded] = useState(!node.summary);
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagText, setFlagText] = useState("");
   const [flagSent, setFlagSent] = useState(false);
@@ -259,15 +261,27 @@ function NodeCard({ node }: { node: MatchedNode }) {
           🚩 Flag
         </button>
       </div>
-      <div className="prose-answer text-sm">
-        <ReactMarkdown>{visible}</ReactMarkdown>
-      </div>
-      {hasMore && (
+      {/* AI summary takes the headline slot when available */}
+      {node.summary && (
+        <p className="text-sm text-stone-800 leading-relaxed bg-amber-50/40 border-l-2 border-amber-300 pl-3 py-1.5 mb-3">
+          {node.summary}
+        </p>
+      )}
+      {expanded && (
+        <div className="prose-answer text-sm">
+          <ReactMarkdown>{visible}</ReactMarkdown>
+        </div>
+      )}
+      {(node.summary || hasMore) && (
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-xs text-accent mt-2 hover:underline"
         >
-          {expanded ? "Show less" : "Show full content"}
+          {expanded
+            ? "Hide details"
+            : node.summary
+              ? "Show full content →"
+              : "Show details →"}
         </button>
       )}
 
@@ -358,6 +372,7 @@ function DriCard({ dri, query }: { dri: MatchedNode; query: string }) {
 }
 
 function DocContentQuote({ doc }: { doc: MatchedDocument }) {
+  const [expanded, setExpanded] = useState(!doc.summary);
   const cleanName = cleanFilename(doc.filename);
   const link = resolveDocLink(doc.filename, doc.drive_url);
   const cleanedExcerpt = stripFakeMdLinks(
@@ -371,17 +386,38 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
         Shared {doc.date}
         {doc.sender && ` · sender ${doc.sender.slice(-6)}`}
       </p>
-      <div className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 prose-answer">
-        <ReactMarkdown>{cleanedExcerpt}</ReactMarkdown>
+      {doc.summary && (
+        <p className="text-sm text-stone-800 leading-relaxed bg-amber-50/40 border-l-2 border-amber-300 pl-3 py-1.5 mb-3">
+          {doc.summary}
+        </p>
+      )}
+      {expanded && cleanedExcerpt && (
+        <div className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 prose-answer">
+          <ReactMarkdown>{cleanedExcerpt}</ReactMarkdown>
+        </div>
+      )}
+      <div className="flex items-center gap-3 mt-2 flex-wrap">
+        {(doc.summary || cleanedExcerpt) && cleanedExcerpt && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-accent hover:underline"
+          >
+            {expanded
+              ? "Hide quote"
+              : doc.summary
+                ? "Show quote →"
+                : "Show details →"}
+          </button>
+        )}
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-accent hover:underline inline-block"
+        >
+          {link.label}
+        </a>
       </div>
-      <a
-        href={link.url}
-        target="_blank"
-        rel="noreferrer"
-        className="text-xs text-accent hover:underline mt-2 inline-block"
-      >
-        {link.label}
-      </a>
     </div>
   );
 }

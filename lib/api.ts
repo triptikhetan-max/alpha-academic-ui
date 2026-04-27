@@ -17,6 +17,8 @@ export type MatchedNode = {
   dri_name: string | null;
   dri_email: string | null;
   last_updated: string | null;
+  /** AI-generated 1-3 sentence summary; null if not yet summarized */
+  summary: string | null;
 };
 
 export type MatchedDocument = {
@@ -27,6 +29,8 @@ export type MatchedDocument = {
   subject_tags: string[];
   has_content: boolean;
   content_excerpt: string | null;
+  /** AI-generated 1-3 sentence summary; null if not yet summarized */
+  summary: string | null;
 };
 
 export type AskResponse = {
