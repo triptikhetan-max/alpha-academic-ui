@@ -141,28 +141,41 @@ export function ChatBox() {
       {/* Answer */}
       {data && !loading && (
         <>
-          <Answer data={data} />
+          <Answer data={data} query={query} />
 
-          {/* Flag-a-gap button */}
+          {/* Edit / flag-a-gap panel */}
           <div className="border-t border-stone-200 pt-4">
             {!feedbackOpen ? (
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="text-xs text-stone-500 hover:text-stone-800 underline"
-              >
-                Something wrong or missing? Flag a gap →
-              </button>
+              <div className="text-xs text-stone-500 space-y-1">
+                <p>
+                  <button
+                    onClick={() => setFeedbackOpen(true)}
+                    className="text-stone-700 hover:text-ink underline font-medium"
+                  >
+                    Wrong, missing, or out of date? Suggest an edit →
+                  </button>
+                </p>
+                <p className="text-stone-400">
+                  Edits and gaps land in Tripti&apos;s weekly review log. The
+                  brain refreshes every Monday.
+                </p>
+              </div>
             ) : feedbackSent ? (
               <p className="text-xs text-green-700">
-                ✓ Sent. Tripti will review on the next refresh.
+                ✓ Sent. Tripti will pick this up in the weekly refresh.
               </p>
             ) : (
               <div className="space-y-2">
+                <p className="text-xs text-stone-600">
+                  <strong>What&apos;s wrong, missing, or should change?</strong>{" "}
+                  Tell me as much as you can: the correct answer, the source
+                  doc, the right DRI — anything helps Tripti fix it.
+                </p>
                 <textarea
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
-                  placeholder="What's wrong / missing? Give the correct answer if you know it, plus the source."
-                  rows={3}
+                  placeholder={`Example:\nThe DRI for Math 6-8 is now Maya, not Julian — see Apr 15 announcement in chat.`}
+                  rows={5}
                   className="w-full text-sm bg-white border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent"
                 />
                 <div className="flex gap-2 justify-end">
@@ -180,7 +193,7 @@ export function ChatBox() {
                     disabled={!feedbackText.trim()}
                     className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40"
                   >
-                    Send to Tripti
+                    Send for weekly review
                   </button>
                 </div>
               </div>

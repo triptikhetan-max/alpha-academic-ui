@@ -1,15 +1,45 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import type { AskResponse, MatchedDocument, MatchedNode } from "@/lib/api";
 
-export function Answer({ data }: { data: AskResponse }) {
+/** Strip YAML frontmatter (between leading `---` markers) from a node body. */
+function stripFrontmatter(text: string): string {
+  if (!text) return "";
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith("---")) return text;
+  const end = trimmed.indexOf("\n---", 3);
+  if (end === -1) return text;
+  return trimmed.slice(end + 4).replace(/^\s*\n/, "");
+}
+
+export function Answer({
+  data,
+  query,
+}: {
+  data: AskResponse;
+  query: string;
+}) {
   if (!data.matched_nodes.length && !data.matched_documents.length) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900">
-        <p className="font-medium mb-1">Couldn't find anything for that.</p>
-        <p>Try rephrasing, or click <strong>Flag a gap</strong> below to
-        tell Tripti what's missing.</p>
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 text-sm text-amber-900 space-y-3">
+        <p className="font-medium">Couldn&apos;t find anything for that.</p>
+        <p>A few things you can do:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            Rephrase the question (be specific — &ldquo;Math 3-5&rdquo; instead
+            of &ldquo;math&rdquo;).
+          </li>
+          <li>
+            Click <strong>Flag a gap</strong> below — Tripti adds it on the
+            next weekly refresh.
+          </li>
+          <li>
+            If urgent, ping the relevant DRI directly (try asking{" "}
+            <em>&ldquo;who owns &lt;subject&gt;?&rdquo;</em> first).
+          </li>
+        </ul>
       </div>
     );
   }
@@ -35,22 +65,7 @@ export function Answer({ data }: { data: AskResponse }) {
       {/* WHO TO CONTACT */}
       {topDri && (
         <Section icon="👤" title="Who to contact">
-          <div className="bg-white border border-stone-200 rounded-lg p-4">
-            <p className="font-medium text-ink">
-              {topDri.dri_name}
-            </p>
-            {topDri.dri_email && (
-              <a
-                href={`mailto:${topDri.dri_email}`}
-                className="text-accent text-sm hover:underline"
-              >
-                {topDri.dri_email}
-              </a>
-            )}
-            <p className="text-xs text-stone-500 mt-1">
-              {topDri.kind} · {topDri.title}
-            </p>
-          </div>
+          <DriCard dri={topDri} query={query} />
         </Section>
       )}
 
@@ -90,8 +105,12 @@ function Section({
 
 function NodeCard({ node }: { node: MatchedNode }) {
   const [expanded, setExpanded] = useState(false);
-  const excerpt = node.excerpt || node.body.slice(0, 600);
-  const hasMore = node.body.length > excerpt.length;
+  const cleanBody = stripFrontmatter(node.body);
+  const fallbackExcerpt = cleanBody.slice(0, 600);
+  const cleanExcerpt = stripFrontmatter(node.excerpt) || fallbackExcerpt;
+  const hasMore = cleanBody.length > cleanExcerpt.length + 5;
+  const visible = expanded ? cleanBody : cleanExcerpt;
+
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
       <div className="flex items-start justify-between mb-2 gap-2">
@@ -103,9 +122,9 @@ function NodeCard({ node }: { node: MatchedNode }) {
           </p>
         </div>
       </div>
-      <pre className="text-sm text-stone-700 whitespace-pre-wrap font-sans leading-relaxed">
-        {expanded ? node.body : excerpt}
-      </pre>
+      <div className="prose-answer text-sm text-stone-700">
+        <ReactMarkdown>{visible}</ReactMarkdown>
+      </div>
       {hasMore && (
         <button
           onClick={() => setExpanded(!expanded)}
@@ -118,6 +137,46 @@ function NodeCard({ node }: { node: MatchedNode }) {
   );
 }
 
+function DriCard({ dri, query }: { dri: MatchedNode; query: string }) {
+  const firstName = dri.dri_name?.split(" ")[0] ?? "DRI";
+  const subject = `Question about ${dri.title}`;
+  const body =
+    `Hi ${firstName},\n\n` +
+    `I was looking up: "${query}"\n\n` +
+    `Could you help with this, or point me to the right place?\n\n` +
+    `Thanks!\n`;
+  const mailto = dri.dri_email
+    ? `mailto:${dri.dri_email}?subject=${encodeURIComponent(
+        subject,
+      )}&body=${encodeURIComponent(body)}`
+    : null;
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-lg p-4">
+      <p className="font-medium text-ink">{dri.dri_name}</p>
+      {dri.dri_email && (
+        <a
+          href={`mailto:${dri.dri_email}`}
+          className="text-accent text-sm hover:underline"
+        >
+          {dri.dri_email}
+        </a>
+      )}
+      <p className="text-xs text-stone-500 mt-1">
+        {dri.kind} · {dri.title}
+      </p>
+      {mailto && (
+        <a
+          href={mailto}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs bg-ink text-white rounded-lg px-3 py-1.5 hover:bg-stone-800 transition"
+        >
+          ✉️ Ping {firstName} about this
+        </a>
+      )}
+    </div>
+  );
+}
+
 function DocContentQuote({ doc }: { doc: MatchedDocument }) {
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
@@ -125,11 +184,12 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
         From: {doc.filename}
       </p>
       <p className="text-xs text-stone-500 mb-2">
-        Shared {doc.date}{doc.sender && ` · sender ${doc.sender.slice(-6)}`}
+        Shared {doc.date}
+        {doc.sender && ` · sender ${doc.sender.slice(-6)}`}
       </p>
-      <blockquote className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 whitespace-pre-wrap">
-        {doc.content_excerpt}
-      </blockquote>
+      <div className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 prose-answer">
+        <ReactMarkdown>{doc.content_excerpt ?? ""}</ReactMarkdown>
+      </div>
       {doc.drive_url && (
         <a
           href={doc.drive_url}
