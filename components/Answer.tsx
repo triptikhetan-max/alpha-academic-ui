@@ -15,6 +15,49 @@ function stripFrontmatter(text: string): string {
 }
 
 /**
+ * Some content in the brain is wrap-corrupted: every word ends up on its own
+ * paragraph because the source extraction inserted blank lines mid-sentence.
+ * Detect short fragments and merge them back into flowing text so the UI is
+ * actually readable.
+ */
+function cleanContent(text: string): string {
+  if (!text) return "";
+  const normalized = text.replace(/\r\n/g, "\n");
+  // Collapse 3+ newlines down to a paragraph break
+  const compacted = normalized.replace(/\n{3,}/g, "\n\n");
+  const blocks = compacted.split(/\n{2,}/);
+  const merged: string[] = [];
+
+  for (const raw of blocks) {
+    const block = raw.trim();
+    if (!block) continue;
+    if (merged.length === 0) {
+      merged.push(block);
+      continue;
+    }
+    const prev = merged[merged.length - 1];
+    const blockWords = block.split(/\s+/).length;
+    const prevEndsWithSentence = /[.!?:;]\s*$/.test(prev);
+    const blockStartsLower = /^[a-z]/.test(block);
+    const blockIsBullet = /^[-*•\d]/.test(block);
+    const blockIsHeading = /^#/.test(block);
+    // Merge if the fragment is short and clearly continues the previous line,
+    // or if the previous line didn't terminate and this one starts lowercase.
+    const shouldMerge =
+      !blockIsBullet &&
+      !blockIsHeading &&
+      ((blockWords <= 4 && !/[.!?:]$/.test(block)) ||
+        (!prevEndsWithSentence && blockStartsLower));
+    if (shouldMerge) {
+      merged[merged.length - 1] = prev + " " + block;
+    } else {
+      merged.push(block);
+    }
+  }
+  return merged.join("\n\n");
+}
+
+/**
  * Some filenames in the brain are stored with markdown-link syntax baked in,
  * e.g. "[31035-math-academy-101.md](http://31035-math-academy-101.md)". The
  * inner pseudo-URL is fake — extract just the human-readable filename.
@@ -35,6 +78,38 @@ function isRealDriveUrl(url: string | null | undefined): boolean {
   if (/\.md(?:[/?#]|$)/i.test(url)) return false;
   if (!/^https?:\/\//i.test(url)) return false;
   return true;
+}
+
+/**
+ * Resolve the right "open" URL + label for a document. Three paths:
+ *   1. Support articles (filenames like `31035-math-academy-101.md`) →
+ *      https://support.alpha.school/article/31035
+ *   2. Real Drive URL → use it directly
+ *   3. Otherwise → Drive search by filename so the user can hunt
+ */
+function resolveDocLink(
+  filename: string,
+  driveUrl: string | null | undefined,
+): { url: string; label: string } {
+  const clean = cleanFilename(filename);
+  // Support article pattern: leading digits, then dash, .md extension
+  const articleMatch = clean.match(/^(\d+)-.*\.md$/i);
+  if (articleMatch) {
+    return {
+      url: `https://support.alpha.school/article/${articleMatch[1]}`,
+      label: "Open article →",
+    };
+  }
+  if (isRealDriveUrl(driveUrl)) {
+    return { url: driveUrl!, label: "Open →" };
+  }
+  const searchTerm = clean.replace(/\.[^/.]+$/, "");
+  return {
+    url: `https://drive.google.com/drive/search?q=${encodeURIComponent(
+      searchTerm,
+    )}`,
+    label: "Find in Drive →",
+  };
 }
 
 export function Answer({
@@ -131,9 +206,10 @@ function NodeCard({ node }: { node: MatchedNode }) {
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagText, setFlagText] = useState("");
   const [flagSent, setFlagSent] = useState(false);
-  const cleanBody = stripFrontmatter(node.body);
+  const cleanBody = cleanContent(stripFrontmatter(node.body));
   const fallbackExcerpt = cleanBody.slice(0, 600);
-  const cleanExcerpt = stripFrontmatter(node.excerpt) || fallbackExcerpt;
+  const cleanExcerpt =
+    cleanContent(stripFrontmatter(node.excerpt)) || fallbackExcerpt;
   const hasMore = cleanBody.length > cleanExcerpt.length + 5;
   const visible = expanded ? cleanBody : cleanExcerpt;
 
@@ -275,13 +351,8 @@ function DriCard({ dri, query }: { dri: MatchedNode; query: string }) {
 
 function DocContentQuote({ doc }: { doc: MatchedDocument }) {
   const cleanName = cleanFilename(doc.filename);
-  const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(
-    cleanName.replace(/\.[^/.]+$/, ""),
-  )}`;
-  const linkUrl = isRealDriveUrl(doc.drive_url) ? doc.drive_url! : driveSearchUrl;
-  const linkLabel = isRealDriveUrl(doc.drive_url)
-    ? "Open original →"
-    : "Find original in Drive →";
+  const link = resolveDocLink(doc.filename, doc.drive_url);
+  const cleanedExcerpt = cleanContent(doc.content_excerpt ?? "");
 
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
@@ -291,15 +362,15 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
         {doc.sender && ` · sender ${doc.sender.slice(-6)}`}
       </p>
       <div className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 prose-answer">
-        <ReactMarkdown>{doc.content_excerpt ?? ""}</ReactMarkdown>
+        <ReactMarkdown>{cleanedExcerpt}</ReactMarkdown>
       </div>
       <a
-        href={linkUrl}
+        href={link.url}
         target="_blank"
         rel="noreferrer"
         className="text-xs text-accent hover:underline mt-2 inline-block"
       >
-        {linkLabel}
+        {link.label}
       </a>
     </div>
   );
@@ -307,12 +378,7 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
 
 function DocLink({ doc }: { doc: MatchedDocument }) {
   const cleanName = cleanFilename(doc.filename);
-  // If we don't have a real Drive URL, fall back to Drive search by filename
-  const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(
-    cleanName.replace(/\.[^/.]+$/, ""),
-  )}`;
-  const linkUrl = isRealDriveUrl(doc.drive_url) ? doc.drive_url! : driveSearchUrl;
-  const linkLabel = isRealDriveUrl(doc.drive_url) ? "Open →" : "Find in Drive →";
+  const link = resolveDocLink(doc.filename, doc.drive_url);
 
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-3 flex items-start justify-between gap-3 hover:border-stone-300 transition">
@@ -335,12 +401,12 @@ function DocLink({ doc }: { doc: MatchedDocument }) {
         </p>
       </div>
       <a
-        href={linkUrl}
+        href={link.url}
         target="_blank"
         rel="noreferrer"
         className="text-xs text-accent hover:underline whitespace-nowrap"
       >
-        {linkLabel}
+        {link.label}
       </a>
     </div>
   );
