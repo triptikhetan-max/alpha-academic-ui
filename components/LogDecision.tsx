@@ -90,12 +90,19 @@ export function LogDecision() {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="text-xs bg-ink text-white rounded-lg px-3 py-1.5 hover:bg-stone-800 transition"
-      >
-        🏛️ Log a decision or update
-      </button>
+      <div className="space-y-1">
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs bg-ink text-white rounded-lg px-3 py-1.5 hover:bg-stone-800 transition"
+        >
+          🏛️ Log a decision or update
+        </button>
+        <p className="text-xs text-stone-500 mt-1.5">
+          Sends a pre-filled approval email to the <strong>subject DRI</strong>
+          {" "}(cc&apos;d to Tripti). After they approve, it goes into the brain
+          on Monday&apos;s refresh.
+        </p>
+      </div>
     );
   }
 

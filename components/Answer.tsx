@@ -105,24 +105,54 @@ function Section({
 
 function NodeCard({ node }: { node: MatchedNode }) {
   const [expanded, setExpanded] = useState(false);
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagText, setFlagText] = useState("");
+  const [flagSent, setFlagSent] = useState(false);
   const cleanBody = stripFrontmatter(node.body);
   const fallbackExcerpt = cleanBody.slice(0, 600);
   const cleanExcerpt = stripFrontmatter(node.excerpt) || fallbackExcerpt;
   const hasMore = cleanBody.length > cleanExcerpt.length + 5;
   const visible = expanded ? cleanBody : cleanExcerpt;
 
+  async function sendFlag() {
+    if (!flagText.trim()) return;
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `[FLAG on ${node.kind}: "${node.title}"]\n\n${flagText}`,
+        kind: "correction",
+        claude_said: node.title,
+        source: node.name,
+      }),
+    });
+    setFlagSent(true);
+    setFlagText("");
+    setTimeout(() => {
+      setFlagOpen(false);
+      setFlagSent(false);
+    }, 2000);
+  }
+
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
       <div className="flex items-start justify-between mb-2 gap-2">
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-medium text-ink">{node.title}</p>
           <p className="text-xs text-stone-500">
             {node.kind}
             {node.last_updated && ` · updated ${node.last_updated}`}
           </p>
         </div>
+        <button
+          onClick={() => setFlagOpen(!flagOpen)}
+          title="Flag this entry as wrong or out of date"
+          className="text-xs text-stone-400 hover:text-red-600 transition shrink-0"
+        >
+          🚩 Flag
+        </button>
       </div>
-      <div className="prose-answer text-sm text-stone-700">
+      <div className="prose-answer text-sm">
         <ReactMarkdown>{visible}</ReactMarkdown>
       </div>
       {hasMore && (
@@ -132,6 +162,49 @@ function NodeCard({ node }: { node: MatchedNode }) {
         >
           {expanded ? "Show less" : "Show full content"}
         </button>
+      )}
+
+      {/* Inline flag form for THIS specific entry */}
+      {flagOpen && (
+        <div className="mt-3 pt-3 border-t border-stone-100">
+          {flagSent ? (
+            <p className="text-xs text-green-700">
+              ✓ Flagged. Tripti reviews on Monday.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-stone-600">
+                What&apos;s wrong with{" "}
+                <strong>&ldquo;{node.title}&rdquo;</strong>?
+              </p>
+              <textarea
+                value={flagText}
+                onChange={(e) => setFlagText(e.target.value)}
+                placeholder="e.g. The DRI changed last week. The new owner is Maya, see Apr 15 announcement."
+                rows={3}
+                className="w-full text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setFlagOpen(false);
+                    setFlagText("");
+                  }}
+                  className="text-xs text-stone-500 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendFlag}
+                  disabled={!flagText.trim()}
+                  className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40"
+                >
+                  Send to Tripti
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -205,6 +278,13 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
 }
 
 function DocLink({ doc }: { doc: MatchedDocument }) {
+  // Fallback: if we don't have a direct Drive URL, search Drive for the filename
+  const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(
+    doc.filename.replace(/\.[^/.]+$/, ""),
+  )}`;
+  const linkUrl = doc.drive_url ?? driveSearchUrl;
+  const linkLabel = doc.drive_url ? "Open →" : "Find in Drive →";
+
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-3 flex items-start justify-between gap-3 hover:border-stone-300 transition">
       <div className="flex-1 min-w-0">
@@ -225,18 +305,14 @@ function DocLink({ doc }: { doc: MatchedDocument }) {
           )}
         </p>
       </div>
-      {doc.drive_url ? (
-        <a
-          href={doc.drive_url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-accent hover:underline whitespace-nowrap"
-        >
-          Open →
-        </a>
-      ) : (
-        <span className="text-xs text-stone-400">no link</span>
-      )}
+      <a
+        href={linkUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs text-accent hover:underline whitespace-nowrap"
+      >
+        {linkLabel}
+      </a>
     </div>
   );
 }
