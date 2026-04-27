@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #fafaf7;
+  color: #0f1419;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+/* Markdown styling for answer rendering */
+.prose-answer h2 { @apply text-base font-semibold mt-4 mb-2 text-ink; }
+.prose-answer h3 { @apply text-sm font-semibold mt-3 mb-1 text-ink; }
+.prose-answer ul { @apply list-disc pl-5 my-2 space-y-1; }
+.prose-answer ol { @apply list-decimal pl-5 my-2 space-y-1; }
+.prose-answer p { @apply my-2 leading-relaxed; }
+.prose-answer a { @apply text-accent underline underline-offset-2 hover:opacity-80; }
+.prose-answer code { @apply bg-stone-200 rounded px-1 py-0.5 text-sm; }
+.prose-answer blockquote { @apply border-l-2 border-stone-300 pl-3 my-2 italic text-stone-600; }
+.prose-answer table { @apply w-full text-sm my-3 border-collapse; }
+.prose-answer th, .prose-answer td { @apply border-b border-stone-200 px-2 py-1 text-left; }
+.prose-answer hr { @apply my-4 border-stone-200; }
