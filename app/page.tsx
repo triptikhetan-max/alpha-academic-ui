@@ -48,7 +48,65 @@ export default async function HomePage() {
       </header>
 
       {/* Body */}
-      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-6">
+        {/* Intro panel — explains what the brain is and how it works */}
+        <section className="bg-white border border-stone-200 rounded-xl p-5">
+          <h2 className="font-semibold text-ink mb-2">
+            Your team's brain — ask anything about Alpha academics.
+          </h2>
+          <p className="text-sm text-stone-700 leading-relaxed">
+            Pulls from <strong>1,759 docs</strong> in our academics chat,{" "}
+            <strong>47 architecture decisions</strong>,{" "}
+            <strong>35 people</strong> (subject + campus DRIs),{" "}
+            <strong>20 platforms</strong>, <strong>8 policies</strong>,{" "}
+            <strong>14 campuses</strong>, and <strong>436 support articles</strong>{" "}
+            from support.alpha.school. Refreshed weekly.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs">
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
+              <p className="font-semibold text-ink mb-1">📚 What we know</p>
+              <p className="text-stone-600 leading-relaxed">
+                Quoted answers from real playbooks, policies, and ADRs — not
+                summaries.
+              </p>
+            </div>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
+              <p className="font-semibold text-ink mb-1">👤 Who to contact</p>
+              <p className="text-stone-600 leading-relaxed">
+                The DRI's name and email — so you know who to escalate to.
+              </p>
+            </div>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
+              <p className="font-semibold text-ink mb-1">📄 Where the doc is</p>
+              <p className="text-stone-600 leading-relaxed">
+                Drive links to the original source so you can read the full
+                thing.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-500 leading-relaxed space-y-1">
+            <p>
+              <strong className="text-stone-700">How to ask well:</strong> be
+              specific (Math 3-5, not math). Mention the subject, the platform,
+              or the policy. Plain English works.
+            </p>
+            <p>
+              <strong className="text-stone-700">If something's wrong:</strong>{" "}
+              click <em>Flag a gap</em> below any answer — it lands in Tripti's
+              gap log for the next refresh.
+            </p>
+            <p>
+              See{" "}
+              <a href="/brain" className="text-accent underline">
+                what's in the brain
+              </a>{" "}
+              for the full structure.
+            </p>
+          </div>
+        </section>
+
         <ChatBox />
       </div>
 
