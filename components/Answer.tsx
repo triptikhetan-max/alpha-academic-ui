@@ -14,6 +14,29 @@ function stripFrontmatter(text: string): string {
   return trimmed.slice(end + 4).replace(/^\s*\n/, "");
 }
 
+/**
+ * Some filenames in the brain are stored with markdown-link syntax baked in,
+ * e.g. "[31035-math-academy-101.md](http://31035-math-academy-101.md)". The
+ * inner pseudo-URL is fake — extract just the human-readable filename.
+ */
+function cleanFilename(name: string): string {
+  if (!name) return "";
+  const match = name.match(/^\[([^\]]+)\]\([^)]+\)$/);
+  return match ? match[1] : name;
+}
+
+/**
+ * Check whether a `drive_url` from the brain is a real Drive/Docs link, not
+ * a pseudo-URL like `http://31035-math-academy-101.md` that some legacy data
+ * carries in the markdown-link form.
+ */
+function isRealDriveUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  if (/\.md(?:[/?#]|$)/i.test(url)) return false;
+  if (!/^https?:\/\//i.test(url)) return false;
+  return true;
+}
+
 export function Answer({
   data,
   query,
@@ -251,11 +274,18 @@ function DriCard({ dri, query }: { dri: MatchedNode; query: string }) {
 }
 
 function DocContentQuote({ doc }: { doc: MatchedDocument }) {
+  const cleanName = cleanFilename(doc.filename);
+  const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(
+    cleanName.replace(/\.[^/.]+$/, ""),
+  )}`;
+  const linkUrl = isRealDriveUrl(doc.drive_url) ? doc.drive_url! : driveSearchUrl;
+  const linkLabel = isRealDriveUrl(doc.drive_url)
+    ? "Open original →"
+    : "Find original in Drive →";
+
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
-      <p className="text-sm font-medium text-ink mb-1">
-        From: {doc.filename}
-      </p>
+      <p className="text-sm font-medium text-ink mb-1">From: {cleanName}</p>
       <p className="text-xs text-stone-500 mb-2">
         Shared {doc.date}
         {doc.sender && ` · sender ${doc.sender.slice(-6)}`}
@@ -263,32 +293,31 @@ function DocContentQuote({ doc }: { doc: MatchedDocument }) {
       <div className="border-l-2 border-stone-300 pl-3 text-sm text-stone-700 prose-answer">
         <ReactMarkdown>{doc.content_excerpt ?? ""}</ReactMarkdown>
       </div>
-      {doc.drive_url && (
-        <a
-          href={doc.drive_url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-accent hover:underline mt-2 inline-block"
-        >
-          Open original →
-        </a>
-      )}
+      <a
+        href={linkUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs text-accent hover:underline mt-2 inline-block"
+      >
+        {linkLabel}
+      </a>
     </div>
   );
 }
 
 function DocLink({ doc }: { doc: MatchedDocument }) {
-  // Fallback: if we don't have a direct Drive URL, search Drive for the filename
+  const cleanName = cleanFilename(doc.filename);
+  // If we don't have a real Drive URL, fall back to Drive search by filename
   const driveSearchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(
-    doc.filename.replace(/\.[^/.]+$/, ""),
+    cleanName.replace(/\.[^/.]+$/, ""),
   )}`;
-  const linkUrl = doc.drive_url ?? driveSearchUrl;
-  const linkLabel = doc.drive_url ? "Open →" : "Find in Drive →";
+  const linkUrl = isRealDriveUrl(doc.drive_url) ? doc.drive_url! : driveSearchUrl;
+  const linkLabel = isRealDriveUrl(doc.drive_url) ? "Open →" : "Find in Drive →";
 
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-3 flex items-start justify-between gap-3 hover:border-stone-300 transition">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink truncate">{doc.filename}</p>
+        <p className="text-sm font-medium text-ink truncate">{cleanName}</p>
         <p className="text-xs text-stone-500">
           Shared {doc.date}
           {doc.subject_tags.length > 0 && (
