@@ -32,7 +32,7 @@ html, body {
 .prose-answer pre { @apply bg-stone-50 border border-stone-200 rounded-lg p-3 my-3 overflow-x-auto text-[13px]; }
 .prose-answer pre code { @apply bg-transparent border-0 p-0; }
 
-.prose-answer blockquote { @apply border-l-3 border-accent/40 pl-4 my-3 text-stone-600; }
+.prose-answer blockquote { @apply border-l-2 border-accent/40 pl-4 my-3 text-stone-600; }
 .prose-answer blockquote p { @apply my-1; }
 
 .prose-answer table { @apply w-full text-sm my-4 border-collapse; }
