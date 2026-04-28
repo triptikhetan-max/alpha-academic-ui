@@ -65,15 +65,15 @@ export default async function HomePage() {
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-stone-700 leading-relaxed space-y-2">
             <p className="font-semibold text-stone-900">
-              ⚡ This UI is the quick-lookup surface — the{" "}
-              <em>Claude Code plugin</em> is the real workhorse.
+              📍 The brain is a single knowledge base. This UI is one way to
+              access it — the Claude Code plugin is another.
             </p>
             <p>
-              The plugin gives you the same brain inside your terminal or VS
-              Code: chain questions, do bulk lookups across subjects/people,
-              run it while you&apos;re actually working on QC or curriculum. If
-              you&apos;ll use the brain more than a couple times a week, get
-              the plugin.
+              Same data either way. The web UI is great for one-off questions.
+              The plugin means you don&apos;t have to leave your work to ask
+              one — if you already live in Claude Code (terminal, VS Code,
+              wherever), you can call the brain in-context. No tab-switching,
+              no losing your place.
             </p>
             <p className="pt-1">
               <PluginInfo userEmail={session.user.email ?? null} />

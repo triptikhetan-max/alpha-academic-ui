@@ -72,10 +72,11 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
             💻 Claude Code plugin
           </h4>
           <p className="text-xs text-stone-500 mt-0.5">
-            Query the brain from <strong>anywhere Claude Code runs</strong>
-            {" "}— terminal, VS Code, JetBrains, etc. Same data, more
-            horsepower than the web UI. Best for chained questions and
-            editor-side use.
+            Same brain you&apos;re using on this page, but reachable from{" "}
+            <strong>anywhere Claude Code runs</strong> — terminal, VS Code,
+            JetBrains, etc. The point isn&apos;t more power, it&apos;s no
+            context switch: if you&apos;re already working there, the brain
+            is one command away.
           </p>
         </div>
         <button

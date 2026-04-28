@@ -26,8 +26,9 @@ function installEmailHTML(apiKey: string, recipientName: string): string {
     each with an AI summary. Refreshed weekly.
   </p>
   <p style="margin: 0;">
-    The web UI (<a href="https://alpha-academic-brain-delta.vercel.app" style="color: #0891b2;">alpha-academic-brain-delta.vercel.app</a>) is for quick lookups.
-    <strong>The plugin is for power users</strong> — it lives in your terminal / VS Code so you can chain follow-ups, do bulk lookups, and query while you're actually working.
+    Same brain, two surfaces: the
+    <a href="https://alpha-academic-brain-delta.vercel.app" style="color: #0891b2;">web UI</a>
+    is great for one-off questions. The plugin lets you query the brain from <strong>anywhere Claude Code runs</strong> — so if you already work in Claude Code, you don't have to tab over to the website to look something up.
   </p>
 
   <h2 style="font-size: 17px; margin-top: 28px; color: #0c4a6e;">Your personal API key</h2>
