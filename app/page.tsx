@@ -54,38 +54,30 @@ export default async function HomePage() {
         {/* What is this? — top intro */}
         <section className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
           <div>
-            <h2 className="font-semibold text-ink mb-2">
-              What is this?
-            </h2>
+            <h2 className="font-semibold text-ink mb-2">What is this?</h2>
             <p className="text-sm text-stone-700 leading-relaxed">
-              A web search interface for the{" "}
-              <strong>Alpha Academic Brain</strong> — a team-curated knowledge
-              base of everything we know as an academics team. Ask anything;
-              the answer comes from our actual playbooks, decisions, DRI list,
-              and shared docs (not made up).
+              A web window into the <strong>Alpha Academic Brain</strong> — a
+              team-curated knowledge base of everything we know as an academics
+              team. Ask anything here for a quick answer; the data comes from
+              our actual playbooks, decisions, DRIs, and shared docs.
             </p>
           </div>
 
-          <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 text-xs text-stone-600 leading-relaxed">
-            <p className="font-semibold text-ink mb-1">
-              💡 Two ways to use the brain
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-stone-700 leading-relaxed space-y-2">
+            <p className="font-semibold text-stone-900">
+              ⚡ This UI is the quick-lookup surface — the{" "}
+              <em>Claude Code plugin</em> is the real workhorse.
             </p>
-            <ul className="space-y-1">
-              <li>
-                <strong>This web UI</strong> — fastest way to ask one question.
-                Sign in with your Alpha email, type, get an answer. Best for
-                quick lookups.
-              </li>
-              <li>
-                <strong>Claude Code plugin</strong> — best for power users who
-                want to chain questions, do bulk lookups, or query from their
-                editor. Same brain, more horsepower.
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <PluginInfo />
+            <p>
+              The plugin gives you the same brain inside your terminal or VS
+              Code: chain questions, do bulk lookups across subjects/people,
+              run it while you&apos;re actually working on QC or curriculum. If
+              you&apos;ll use the brain more than a couple times a week, get
+              the plugin.
+            </p>
+            <p className="pt-1">
+              <PluginInfo userEmail={session.user.email ?? null} />
+            </p>
           </div>
         </section>
 
