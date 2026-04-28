@@ -215,7 +215,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <ChatBox />
+        <ChatBox userEmail={session.user.email ?? null} />
       </div>
 
       {/* Footer */}

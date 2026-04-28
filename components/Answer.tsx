@@ -120,9 +120,11 @@ function stripFakeMdLinks(text: string): string {
 export function Answer({
   data,
   query,
+  userEmail,
 }: {
   data: AskResponse;
   query: string;
+  userEmail: string | null;
 }) {
   if (!data.matched_nodes.length && !data.matched_documents.length) {
     return (
@@ -155,7 +157,7 @@ export function Answer({
       {/* WHAT WE KNOW */}
       <Section icon="📚" title="What we know">
         {data.matched_nodes.slice(0, 2).map((n) => (
-          <NodeCard key={`${n.kind}-${n.name}`} node={n} />
+          <NodeCard key={`${n.kind}-${n.name}`} node={n} userEmail={userEmail} />
         ))}
         {data.matched_documents
           .filter((d) => d.has_content && d.content_excerpt)
@@ -206,7 +208,13 @@ function Section({
   );
 }
 
-function NodeCard({ node }: { node: MatchedNode }) {
+function NodeCard({
+  node,
+  userEmail,
+}: {
+  node: MatchedNode;
+  userEmail: string | null;
+}) {
   // Default-expanded when there's no summary (so users still see content);
   // default-collapsed when there IS a summary (summary is the headline).
   const [expanded, setExpanded] = useState(!node.summary);
@@ -223,24 +231,59 @@ function NodeCard({ node }: { node: MatchedNode }) {
   const hasMore = cleanBody.length > cleanExcerpt.length + 5;
   const visible = expanded ? cleanBody : cleanExcerpt;
 
+  // DRI ownership detection: signed-in user's email matches the entity's DRI.
+  // When true, edits go straight through (no approval). When false but the
+  // entity has a DRI, the form opens a pre-filled email asking the DRI to
+  // approve, with Tripti cc'd (same pattern as LogDecision).
+  const isOwner = !!(
+    userEmail &&
+    node.dri_email &&
+    userEmail.toLowerCase() === node.dri_email.toLowerCase()
+  );
+
   async function sendFlag() {
     if (!flagText.trim()) return;
+    const kind = isOwner ? "dri-direct-edit" : "correction";
     await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `[FLAG on ${node.kind}: "${node.title}"]\n\n${flagText}`,
-        kind: "correction",
+        message:
+          (isOwner
+            ? `[DRI DIRECT EDIT by ${userEmail} on ${node.kind}: "${node.title}"]\n\n`
+            : `[FLAG by ${userEmail || "anonymous"} on ${node.kind}: "${node.title}"]\n\n`) +
+          flagText,
+        kind,
         claude_said: node.title,
         source: node.name,
+        reported_by: userEmail,
       }),
     });
+
+    // If user is NOT the DRI but a DRI exists, also open a pre-filled email
+    // to that DRI asking for approval — same flow as LogDecision.
+    if (!isOwner && node.dri_email) {
+      const subject = `[Approval needed] Edit to ${node.title}`;
+      const body =
+        `Hi ${(node.dri_name || "").split(" ")[0] || "there"},\n\n` +
+        `${userEmail || "Someone"} on the academics team proposed an edit to ${node.title} ` +
+        `(${node.kind}). Since you're the DRI, you have the final say.\n\n` +
+        `— — —\n` +
+        `Proposed edit: ${flagText}\n` +
+        `— — —\n\n` +
+        `Reply ✅ Approve, ❌ Reject, or ✏️ Modify (with the corrected version).\n` +
+        `Once you reply, Tripti will reflect this on the next refresh.\n\n` +
+        `Thanks!\n`;
+      const mailto = `mailto:${node.dri_email}?cc=tripti.khetan@trilogy.com&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailto;
+    }
+
     setFlagSent(true);
     setFlagText("");
     setTimeout(() => {
       setFlagOpen(false);
       setFlagSent(false);
-    }, 2000);
+    }, 2500);
   }
 
   return (
@@ -255,10 +298,18 @@ function NodeCard({ node }: { node: MatchedNode }) {
         </div>
         <button
           onClick={() => setFlagOpen(!flagOpen)}
-          title="Flag this entry as wrong or out of date"
-          className="text-xs text-stone-400 hover:text-red-600 transition shrink-0"
+          title={
+            isOwner
+              ? "You're the DRI — edit this entry directly"
+              : "Flag this entry as wrong or out of date"
+          }
+          className={
+            isOwner
+              ? "text-xs text-emerald-700 hover:text-emerald-900 transition shrink-0 font-medium"
+              : "text-xs text-stone-400 hover:text-red-600 transition shrink-0"
+          }
         >
-          🚩 Flag
+          {isOwner ? "✏️ Edit (you own this)" : "🚩 Flag"}
         </button>
       </div>
       {/* AI summary takes the headline slot when available */}
@@ -285,23 +336,46 @@ function NodeCard({ node }: { node: MatchedNode }) {
         </button>
       )}
 
-      {/* Inline flag form for THIS specific entry */}
+      {/* Inline edit/flag form for THIS specific entry */}
       {flagOpen && (
         <div className="mt-3 pt-3 border-t border-stone-100">
           {flagSent ? (
             <p className="text-xs text-green-700">
-              ✓ Flagged. Tripti reviews on Monday.
+              {isOwner
+                ? "✓ Edit logged. Live on the next refresh (Monday)."
+                : node.dri_email
+                  ? `✓ Sent. Approval email opening to ${node.dri_name}, cc Tripti.`
+                  : "✓ Flagged. Tripti reviews on Monday."}
             </p>
           ) : (
             <div className="space-y-2">
+              {isOwner ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs text-emerald-900">
+                  <strong>You own this entry.</strong> Your edit goes live on
+                  the next refresh — no approval needed.
+                </div>
+              ) : node.dri_email ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-900">
+                  <strong>{node.dri_name}</strong> owns this. Submitting will
+                  open a pre-filled approval email to{" "}
+                  <code className="bg-white px-1 rounded">{node.dri_email}</code>{" "}
+                  (cc Tripti). Goes live after they ✅.
+                </div>
+              ) : null}
+
               <p className="text-xs text-stone-600">
-                What&apos;s wrong with{" "}
-                <strong>&ldquo;{node.title}&rdquo;</strong>?
+                {isOwner
+                  ? "Describe the change:"
+                  : "What's wrong / what should change?"}
               </p>
               <textarea
                 value={flagText}
                 onChange={(e) => setFlagText(e.target.value)}
-                placeholder="e.g. The DRI changed last week. The new owner is Maya, see Apr 15 announcement."
+                placeholder={
+                  isOwner
+                    ? "e.g. Update DRI to Maya — effective 2026-04-15. Source: Apr 15 announcement in chat."
+                    : "e.g. The DRI changed last week. The new owner is Maya, see Apr 15 announcement."
+                }
                 rows={3}
                 className="w-full text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent"
               />
@@ -320,7 +394,11 @@ function NodeCard({ node }: { node: MatchedNode }) {
                   disabled={!flagText.trim()}
                   className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40"
                 >
-                  Send to Tripti
+                  {isOwner
+                    ? "Save edit"
+                    : node.dri_email
+                      ? `Send to ${(node.dri_name || "DRI").split(" ")[0]}`
+                      : "Flag for review"}
                 </button>
               </div>
             </div>

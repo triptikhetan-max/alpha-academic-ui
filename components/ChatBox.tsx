@@ -13,7 +13,7 @@ const SAMPLE_QUERIES = [
   "What did we decide about Math Academy penalties?",
 ];
 
-export function ChatBox() {
+export function ChatBox({ userEmail }: { userEmail?: string | null }) {
   const [query, setQuery] = useState("");
   const [data, setData] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -141,7 +141,7 @@ export function ChatBox() {
       {/* Answer */}
       {data && !loading && (
         <>
-          <Answer data={data} query={query} />
+          <Answer data={data} query={query} userEmail={userEmail ?? null} />
 
           {/* Edit / flag-a-gap panel */}
           <div className="border-t border-stone-200 pt-4">
