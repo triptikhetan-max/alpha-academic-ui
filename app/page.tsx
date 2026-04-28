@@ -183,7 +183,7 @@ export default async function HomePage() {
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
               <p className="font-semibold text-ink">
-                ✏️ Edit a markdown entry directly
+                ✏️ Edit markdown directly (open to PRs)
               </p>
               <p className="text-stone-600 leading-relaxed">
                 Open the{" "}
@@ -195,7 +195,8 @@ export default async function HomePage() {
                 >
                   brain repo on GitHub
                 </a>
-                . Click any file. Pencil icon. Edit. Commit. No install.
+                . Click any file. Pencil icon. Edit. Commit — or open a pull
+                request for bigger changes. No install needed.
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
