@@ -183,20 +183,23 @@ export default async function HomePage() {
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
               <p className="font-semibold text-ink">
-                ✏️ Edit markdown directly (open to PRs)
+                🔧 Improve the brain itself (PRs welcome)
               </p>
               <p className="text-stone-600 leading-relaxed">
-                Open the{" "}
+                Want to add new fields, fix the build scripts, improve the
+                summarization prompt, or add a new entity kind? Open a PR
+                against the{" "}
                 <a
-                  href="https://github.com/triptikhetan-max/alpha-brain-v2/tree/main/vault"
+                  href="https://github.com/triptikhetan-max/alpha-brain-v2"
                   target="_blank"
                   rel="noreferrer"
                   className="text-accent underline"
                 >
-                  brain repo on GitHub
+                  alpha-brain-v2 repo
                 </a>
-                . Click any file. Pencil icon. Edit. Commit — or open a pull
-                request for bigger changes. No install needed.
+                . Tripti reviews. <strong>Brain content edits</strong>{" "}
+                (DRIs, decisions, etc.) always go through the in-app flow
+                above — gated to the right person.
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">

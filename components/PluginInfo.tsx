@@ -8,21 +8,19 @@ brew install --cask claude-code
 # 2. Add the Alpha Academic plugin:
 claude --add-plugin alpha-academic-remote=triptikhetan-max/alpha-public
 
-# 3. Set the API key Tripti emails you:
+# 3. Set the API key (auto-emailed to you):
 claude env set ALPHA_API_KEY=<your-key-here>
 
-# 4. Start a session and try it:
+# 4. Open Claude Code anywhere and try it:
 claude
-> /ask-alpha-academic who owns Math 6-8`;
+> /alpha-academic-remote:ask-alpha-academic who owns Math 6-8`;
 
 type Status = "idle" | "submitting" | "sent" | "error";
 
 export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
-  const [reason, setReason] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   const [mode, setMode] = useState<"auto" | "manual" | null>(null);
 
   async function requestAccess() {
@@ -37,7 +35,7 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
       const res = await fetch("/api/request-plugin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({}),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -74,16 +72,16 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
             💻 Claude Code plugin
           </h4>
           <p className="text-xs text-stone-500 mt-0.5">
-            Query the brain from your terminal or VS Code instead of the
-            web UI. Same data, different surface — better for chained
-            questions, bulk lookups, and editor-side use.
+            Query the brain from <strong>anywhere Claude Code runs</strong>
+            {" "}— terminal, VS Code, JetBrains, etc. Same data, more
+            horsepower than the web UI. Best for chained questions and
+            editor-side use.
           </p>
         </div>
         <button
           onClick={() => {
             setOpen(false);
             setStatus("idle");
-            setReason("");
           }}
           className="text-xs text-stone-400 hover:text-stone-700"
           aria-label="Close"
@@ -130,39 +128,25 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-stone-700 block">
-              What will you use it for? (optional, helps Tripti prioritize)
-            </label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. I want to query the brain from VS Code while I work on AP World History QC."
-              rows={2}
-              className="w-full text-sm bg-white border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent"
-            />
-          </div>
-
           {errorMsg && (
             <p className="text-xs text-red-600">{errorMsg}</p>
           )}
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-stone-500">
-              Will email to: <code className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-700">{userEmail ?? "(no session)"}</code>
-            </p>
+          <div className="flex justify-end">
             <button
               onClick={requestAccess}
               disabled={status === "submitting" || !userEmail}
-              className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-sm bg-ink text-white rounded-lg px-4 py-2 hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
             >
-              {status === "submitting" ? "Sending…" : "Request API key"}
+              {status === "submitting"
+                ? "Sending…"
+                : `📨 Email me my API key + install steps`}
             </button>
           </div>
 
           <details className="text-xs text-stone-500">
             <summary className="cursor-pointer hover:text-ink">
-              Preview the install steps (so you know what you&apos;re signing up for)
+              Preview the install (4 commands)
             </summary>
             <pre className="mt-2 bg-stone-900 text-stone-100 text-[11px] rounded-lg p-3 overflow-x-auto leading-relaxed font-mono">
               {INSTALL_PREVIEW}

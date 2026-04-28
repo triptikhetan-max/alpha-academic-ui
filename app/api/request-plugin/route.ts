@@ -69,7 +69,7 @@ claude
   <ul style="margin: 4px 0 12px; padding-left: 22px;">
     <li><strong>You're the DRI of that area</strong> — edit the entry directly. From the web UI: 🚩 Flag → "you own this" → save. From the plugin: <code>/ask-alpha-academic edit math-6-8 ...</code> (rolling out next).</li>
     <li><strong>You're not the DRI</strong> — flag it. Goes straight to the DRI as an approval email (cc'd to Tripti). They reply ✅ / ❌ and it lands on Monday's refresh.</li>
-    <li><strong>You want to edit several things at once</strong> — open a PR against the brain repo: <a href="https://github.com/triptikhetan-max/alpha-brain-v2" style="color: #0891b2;">github.com/triptikhetan-max/alpha-brain-v2</a>. Every entry is a markdown file. No install needed — pencil icon in the browser, commit, done.</li>
+    <li><strong>You want to improve the brain itself</strong> (build scripts, schema, summarization, new entity kinds) — open a PR against the <a href="https://github.com/triptikhetan-max/alpha-brain-v2" style="color: #0891b2;">alpha-brain-v2 repo</a>. Tripti reviews. Brain content edits (DRIs, decisions, etc.) go through the flag / DRI approval flow above, not direct PRs.</li>
   </ul>
 
   <h2 style="font-size: 17px; margin-top: 28px; color: #0c4a6e;">How updates flow</h2>
