@@ -56,24 +56,24 @@ export default async function HomePage() {
           <div>
             <h2 className="font-semibold text-ink mb-2">What is this?</h2>
             <p className="text-sm text-stone-700 leading-relaxed">
-              A web window into the <strong>Alpha Academic Brain</strong> — a
-              team-curated knowledge base of everything we know as an academics
-              team. Ask anything here for a quick answer; the data comes from
-              our actual playbooks, decisions, DRIs, and shared docs.
+              A team-curated knowledge base of everything we know as an
+              academics team — DRIs, decisions, policies, platforms,
+              campuses, and 1,396 supporting docs from chat + Drive +
+              sheets. Ask anything; the answer comes from our actual
+              source material with an AI summary on top for fast scanning.
             </p>
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-stone-700 leading-relaxed space-y-2">
             <p className="font-semibold text-stone-900">
-              📍 The brain is a single knowledge base. This UI is one way to
-              access it — the Claude Code plugin is another.
+              📍 One brain, two surfaces.
             </p>
             <p>
-              Same data either way. The web UI is great for one-off questions.
-              The plugin means you don&apos;t have to leave your work to ask
-              one — if you already live in Claude Code (terminal, VS Code,
-              wherever), you can call the brain in-context. No tab-switching,
-              no losing your place.
+              The web UI (this page) is great for one-off questions. The
+              Claude Code plugin gives you the same brain inside your
+              editor or terminal — so if you already live in Claude Code,
+              you don&apos;t have to tab over here to look something up.
+              Same data, no context switch.
             </p>
             <p className="pt-1">
               <PluginInfo userEmail={session.user.email ?? null} />
@@ -84,10 +84,18 @@ export default async function HomePage() {
         {/* What's in it */}
         <section className="bg-white border border-stone-200 rounded-xl p-5">
           <h2 className="font-semibold text-ink mb-2">What&apos;s in the brain?</h2>
-          <p className="text-sm text-stone-700 leading-relaxed mb-4">
+          <p className="text-sm text-stone-700 leading-relaxed mb-2">
             <strong>1,560 entities indexed</strong> — pulled from our team chat,
-            shared Drive docs, live Sheets, and curated by Tripti. AI-summarized
-            for fast scanning. Refreshed weekly.
+            shared Drive docs, live Sheets, and curated by Tripti. Refreshed
+            weekly.
+          </p>
+          <p className="text-xs text-stone-500 leading-relaxed mb-4">
+            The body content of every entry is <strong>verbatim from the
+            source</strong> — actual chat messages, real Drive docs, real
+            sheets. Only the 1-3 sentence summary at the top of each card is
+            AI-generated (Claude Sonnet 4.6) for fast scanning. That&apos;s
+            why some entries look a bit rough — they render exactly how they
+            were written. Trust the data, embrace the edges.
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
@@ -183,25 +191,25 @@ export default async function HomePage() {
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
               <p className="font-semibold text-ink">
-                🔧 Improve the brain itself (PRs welcome)
+                🔧 PRs welcome (especially infrastructure)
               </p>
               <p className="text-stone-600 leading-relaxed">
-                Want to add new fields, fix the build scripts, improve the
-                summarization prompt, or add a new entity kind? Open a PR
-                against the{" "}
+                The brain is markdown in a{" "}
                 <a
                   href="https://github.com/triptikhetan-max/alpha-brain-v2"
                   target="_blank"
                   rel="noreferrer"
                   className="text-accent underline"
                 >
-                  alpha-brain-v2 repo
-                </a>{" "}
-                — that&apos;s infrastructure work. <strong>Content edits</strong>
-                {" "}(DRIs, decisions, policies, etc.) always go through the
-                in-app flow above — approved by the <strong>subject DRI</strong>
-                {" "}for that area, ideally backed by a source link (Drive doc,
-                sheet, or chat thread).
+                  GitHub repo
+                </a>
+                . PRs are welcome from anyone with repo access — for build
+                scripts, schema, summarization tweaks, new entity kinds, etc.
+                For <strong>content edits</strong> (DRIs, decisions,
+                policies), prefer the in-app flow above so the right{" "}
+                <strong>subject DRI</strong> sees them — but a PR with their
+                approval comment also works. Always include a source link
+                (Drive, sheet, chat).
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
