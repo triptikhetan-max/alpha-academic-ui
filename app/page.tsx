@@ -2,6 +2,7 @@ import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ChatBox } from "@/components/ChatBox";
 import { LogDecision } from "@/components/LogDecision";
+import { PluginInfo } from "@/components/PluginInfo";
 
 export default async function HomePage() {
   const session = await auth();
@@ -50,90 +51,174 @@ export default async function HomePage() {
 
       {/* Body */}
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-6">
-        {/* Intro panel — explains what the brain is and how it works */}
+        {/* What is this? — top intro */}
+        <section className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+          <div>
+            <h2 className="font-semibold text-ink mb-2">
+              What is this?
+            </h2>
+            <p className="text-sm text-stone-700 leading-relaxed">
+              A web search interface for the{" "}
+              <strong>Alpha Academic Brain</strong> — a team-curated knowledge
+              base of everything we know as an academics team. Ask anything;
+              the answer comes from our actual playbooks, decisions, DRI list,
+              and shared docs (not made up).
+            </p>
+          </div>
+
+          <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 text-xs text-stone-600 leading-relaxed">
+            <p className="font-semibold text-ink mb-1">
+              💡 Two ways to use the brain
+            </p>
+            <ul className="space-y-1">
+              <li>
+                <strong>This web UI</strong> — fastest way to ask one question.
+                Sign in with your Alpha email, type, get an answer. Best for
+                quick lookups.
+              </li>
+              <li>
+                <strong>Claude Code plugin</strong> — best for power users who
+                want to chain questions, do bulk lookups, or query from their
+                editor. Same brain, more horsepower.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <PluginInfo />
+          </div>
+        </section>
+
+        {/* What's in it */}
         <section className="bg-white border border-stone-200 rounded-xl p-5">
-          <h2 className="font-semibold text-ink mb-2">
-            Your team's brain — ask anything about Alpha academics.
-          </h2>
-          <p className="text-sm text-stone-700 leading-relaxed">
-            Pulls from <strong>1,759 docs</strong> in our academics chat,{" "}
-            <strong>47 architecture decisions</strong>,{" "}
-            <strong>35 people</strong> (subject + campus DRIs),{" "}
-            <strong>20 platforms</strong>, <strong>8 policies</strong>,{" "}
-            <strong>14 campuses</strong>, and <strong>436 support articles</strong>{" "}
-            from support.alpha.school. Refreshed weekly.
+          <h2 className="font-semibold text-ink mb-2">What&apos;s in the brain?</h2>
+          <p className="text-sm text-stone-700 leading-relaxed mb-4">
+            <strong>1,560 entities indexed</strong> — pulled from our team chat,
+            shared Drive docs, live Sheets, and curated by Tripti. AI-summarized
+            for fast scanning. Refreshed weekly.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            {[
+              ["14", "subjects"],
+              ["20", "platforms"],
+              ["34", "people / DRIs"],
+              ["75", "decisions (ADRs)"],
+              ["8", "policies"],
+              ["13", "campuses"],
+              ["1,396", "supporting docs"],
+              ["1,191", "AI summaries"],
+            ].map(([n, label]) => (
+              <div
+                key={label}
+                className="bg-stone-50 border border-stone-200 rounded-lg p-3"
+              >
+                <p className="font-semibold text-ink text-base">{n}</p>
+                <p className="text-stone-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-stone-500 mt-4">
+            Want the full structure?{" "}
+            <a href="/brain" className="text-accent underline">
+              Browse what&apos;s in the brain →
+            </a>
+          </p>
+        </section>
+
+        {/* Every answer gives 3 things */}
+        <section className="bg-white border border-stone-200 rounded-xl p-5">
+          <h2 className="font-semibold text-ink mb-2">Every answer gives you 3 things</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
               <p className="font-semibold text-ink mb-1">📚 What we know</p>
               <p className="text-stone-600 leading-relaxed">
-                Quoted answers from real playbooks, policies, and ADRs — not
-                summaries.
+                AI summary at the top, then quoted content from real playbooks,
+                policies, and ADRs.
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
               <p className="font-semibold text-ink mb-1">👤 Who to contact</p>
               <p className="text-stone-600 leading-relaxed">
-                The DRI's name and email — so you know who to escalate to.
+                DRI name + their actual email, plus a one-click <em>Ping</em>{" "}
+                button that drafts the email.
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
               <p className="font-semibold text-ink mb-1">📄 Where the doc is</p>
               <p className="text-stone-600 leading-relaxed">
-                Drive links to the original source so you can read the full
-                thing.
+                Direct link to the original Drive doc, sheet, or article.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* How updates happen — anyone can edit */}
+        <section className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+          <div>
+            <h2 className="font-semibold text-ink mb-2">
+              The brain is yours — anyone can improve it
+            </h2>
+            <p className="text-sm text-stone-700 leading-relaxed">
+              Every entry in the brain is a markdown file in a GitHub repo. You
+              don&apos;t need to install Obsidian or anything else. Edit in the
+              browser, commit, done. Tripti reviews weekly; updates ship every
+              Monday.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
+              <p className="font-semibold text-ink">
+                🛠️ Fix something quickly
+              </p>
+              <p className="text-stone-600 leading-relaxed">
+                Click <strong>🚩 Flag</strong> on any card, or{" "}
+                <strong>Suggest an edit</strong> below an answer. Lands in the
+                weekly review log; goes live Monday.
+              </p>
+            </div>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
+              <p className="font-semibold text-ink">
+                🏛️ Log a new decision
+              </p>
+              <p className="text-stone-600 leading-relaxed">
+                Use the button below. Sends a pre-filled approval email to the{" "}
+                <strong>subject DRI</strong> (so they&apos;re in the loop). Goes
+                live Monday once they ✅.
+              </p>
+            </div>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
+              <p className="font-semibold text-ink">
+                ✏️ Edit a markdown entry directly
+              </p>
+              <p className="text-stone-600 leading-relaxed">
+                Open the{" "}
+                <a
+                  href="https://github.com/triptikhetan-max/alpha-brain-v2/tree/main/vault"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent underline"
+                >
+                  brain repo on GitHub
+                </a>
+                . Click any file. Pencil icon. Edit. Commit. No install.
+              </p>
+            </div>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">
+              <p className="font-semibold text-ink">
+                ↩️ Disagree with an answer?
+              </p>
+              <p className="text-stone-600 leading-relaxed">
+                Reply directly to the relevant{" "}
+                <strong>DRI&apos;s email</strong> — every answer surfaces it.
+                They own the truth for their domain.
               </p>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-500 leading-relaxed space-y-2">
-            <p>
-              <strong className="text-stone-700">How to ask well:</strong> be
-              specific (Math 3-5, not math). Mention the subject, the platform,
-              or the policy. Plain English works.
-            </p>
-            <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3 space-y-1.5 text-stone-700">
-              <p>
-                <strong>How submissions work:</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1 text-stone-600">
-                <li>
-                  <strong>🚩 Flag</strong> on a card or{" "}
-                  <strong>Suggest an edit</strong> below an answer →{" "}
-                  Tripti&apos;s weekly review log → goes live next Monday.
-                </li>
-                <li>
-                  <strong>🏛️ Log a decision or update</strong> (button below) →
-                  pre-filled approval email to the <strong>subject DRI</strong>
-                  {" "}(cc Tripti) → after they ✅, goes live next Monday.
-                </li>
-              </ul>
-            </div>
-            <p>
-              See{" "}
-              <a href="/brain" className="text-accent underline">
-                what&apos;s in the brain
-              </a>{" "}
-              for the full structure.
-            </p>
-            <p>
-              <strong className="text-stone-700">
-                Want the Claude Code plugin?
-              </strong>{" "}
-              For power users who want to query from their terminal or VS
-              Code. Ping{" "}
-              <a
-                href="mailto:tripti.khetan@trilogy.com?subject=Alpha%20Academic%20plugin%20access"
-                className="text-accent underline"
-              >
-                Tripti
-              </a>{" "}
-              for the install + API key.
-            </p>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-stone-100">
+          <div className="pt-2">
             <LogDecision />
           </div>
         </section>
@@ -145,10 +230,25 @@ export default async function HomePage() {
       <footer className="border-t border-stone-200 bg-white">
         <div className="max-w-3xl mx-auto px-6 py-4 text-xs text-stone-500 flex flex-wrap gap-4 justify-between">
           <span>
-            Backed by 1,759 docs · 47 decisions · 35 people · 14 subjects
+            1,560 entities · refreshed weekly from chat + Sheets + Drive
           </span>
           <span>
-            Built by Tripti · Refreshed weekly from chat + Sheets + Drive folder
+            Built by{" "}
+            <a
+              href="mailto:tripti.khetan@trilogy.com"
+              className="text-stone-600 hover:text-ink"
+            >
+              Tripti
+            </a>
+            {" · "}
+            <a
+              href="https://github.com/triptikhetan-max/alpha-brain-v2"
+              target="_blank"
+              rel="noreferrer"
+              className="text-stone-600 hover:text-ink"
+            >
+              brain repo
+            </a>
           </span>
         </div>
       </footer>
