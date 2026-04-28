@@ -196,10 +196,12 @@ export default async function HomePage() {
                   className="text-accent underline"
                 >
                   alpha-brain-v2 repo
-                </a>
-                . Tripti reviews. <strong>Brain content edits</strong>{" "}
-                (DRIs, decisions, etc.) always go through the in-app flow
-                above — gated to the right person.
+                </a>{" "}
+                — that&apos;s infrastructure work. <strong>Content edits</strong>
+                {" "}(DRIs, decisions, policies, etc.) always go through the
+                in-app flow above — approved by the <strong>subject DRI</strong>
+                {" "}for that area, ideally backed by a source link (Drive doc,
+                sheet, or chat thread).
               </p>
             </div>
             <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 space-y-1.5">

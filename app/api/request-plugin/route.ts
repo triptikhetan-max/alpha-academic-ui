@@ -67,9 +67,9 @@ claude
 
   <h2 style="font-size: 17px; margin-top: 28px; color: #0c4a6e;">If something's wrong or out of date</h2>
   <ul style="margin: 4px 0 12px; padding-left: 22px;">
-    <li><strong>You're the DRI of that area</strong> — edit the entry directly. From the web UI: 🚩 Flag → "you own this" → save. From the plugin: <code>/ask-alpha-academic edit math-6-8 ...</code> (rolling out next).</li>
-    <li><strong>You're not the DRI</strong> — flag it. Goes straight to the DRI as an approval email (cc'd to Tripti). They reply ✅ / ❌ and it lands on Monday's refresh.</li>
-    <li><strong>You want to improve the brain itself</strong> (build scripts, schema, summarization, new entity kinds) — open a PR against the <a href="https://github.com/triptikhetan-max/alpha-brain-v2" style="color: #0891b2;">alpha-brain-v2 repo</a>. Tripti reviews. Brain content edits (DRIs, decisions, etc.) go through the flag / DRI approval flow above, not direct PRs.</li>
+    <li><strong>You're the DRI of that area</strong> — edit directly. From the web UI: 🚩 → "you own this" → save. From the plugin: <code>/alpha-academic-remote:ask-alpha-academic edit math-6-8 ...</code> (rolling out next).</li>
+    <li><strong>You're not the DRI</strong> — flag it. Goes straight to the subject DRI as an approval email (cc'd to Tripti). They reply ✅ / ❌ and it lands on Monday's refresh. Always include a source link (Drive doc, sheet, chat thread) so the DRI can verify.</li>
+    <li><strong>You want to improve the brain infrastructure</strong> (build scripts, schema, summarization, new entity kinds) — open a PR against <a href="https://github.com/triptikhetan-max/alpha-brain-v2" style="color: #0891b2;">alpha-brain-v2</a>. That's separate from content; reviewed by Tripti. Content edits go through the DRI flow above, not direct PRs.</li>
   </ul>
 
   <h2 style="font-size: 17px; margin-top: 28px; color: #0c4a6e;">How updates flow</h2>
