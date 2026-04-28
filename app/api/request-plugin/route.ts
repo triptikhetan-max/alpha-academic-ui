@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { issueKey } from "@/lib/plugin-keys";
 
-const PLUGIN_API_KEY = process.env.ALPHA_API_KEY ?? "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const FROM_ADDRESS =
   process.env.RESEND_FROM ?? "Alpha Academic Brain <onboarding@resend.dev>";
@@ -63,9 +63,16 @@ export async function POST(request: Request) {
   if (!userEmail) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-  if (!PLUGIN_API_KEY) {
+
+  // Issue a stable per-user key (same email → same key, always)
+  let userKey: string;
+  try {
+    userKey = issueKey(userEmail);
+  } catch (e) {
     return NextResponse.json(
-      { error: "ALPHA_API_KEY not configured on the UI server" },
+      {
+        error: `Key generation failed: ${(e as Error).message}. Make sure PLUGIN_KEY_MASTER_SECRET is set on the UI server.`,
+      },
       { status: 500 },
     );
   }
@@ -80,14 +87,15 @@ export async function POST(request: Request) {
   const recipientName = (session?.user?.name || userEmail.split("@")[0])
     .split(" ")[0];
 
-  // If Resend isn't configured, gracefully degrade: log the request and
-  // return a status that tells the user to expect a manual response.
+  // If Resend isn't configured, gracefully degrade: return the key inline
+  // so we don't fully lock the flow on a missing env var.
   if (!RESEND_API_KEY) {
     return NextResponse.json({
       ok: true,
       mode: "manual",
       message:
-        "Logged. You'll get an email shortly (auto-email isn't enabled yet).",
+        "Resend not configured. Showing key inline as a fallback — admin should set RESEND_API_KEY.",
+      api_key: userKey, // only shown when Resend is missing
     });
   }
 
@@ -104,7 +112,7 @@ export async function POST(request: Request) {
         to: [userEmail],
         cc: [ADMIN_CC],
         subject: "Your Alpha Academic Brain plugin access",
-        html: installEmailHTML(PLUGIN_API_KEY, recipientName),
+        html: installEmailHTML(userKey, recipientName),
         reply_to: ADMIN_CC,
       }),
     });
