@@ -129,11 +129,22 @@ export async function POST(request: Request) {
   // If Gmail SMTP isn't configured, gracefully degrade: return the key inline
   // so we don't fully lock the flow on a missing env var.
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    console.error("[request-plugin] Env vars missing at runtime:", {
+      hasUser: Boolean(GMAIL_USER),
+      hasPassword: Boolean(GMAIL_APP_PASSWORD),
+    });
+    const missing = [
+      !GMAIL_USER && "GMAIL_USER",
+      !GMAIL_APP_PASSWORD && "GMAIL_APP_PASSWORD",
+    ]
+      .filter(Boolean)
+      .join(", ");
     return NextResponse.json({
       ok: true,
       mode: "manual",
       message:
-        "Email isn't configured yet. Showing your key here instead — admin should set GMAIL_USER + GMAIL_APP_PASSWORD.",
+        "Email is not configured at runtime — showing your key here instead.",
+      email_error: `[CASE A: env vars missing] Vercel runtime cannot see: ${missing}. Even though they appear set in the dashboard, they are not reaching this function. Try a fresh redeploy from the Vercel UI.`,
       api_key: userKey,
     });
   }
@@ -180,8 +191,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       mode: "manual",
-      message: `Email delivery hit an error — showing your key here instead.`,
-      email_error: detail || err.message,
+      message: `Email send failed — showing your key here instead.`,
+      email_error: `[CASE B: SMTP send failed] ${detail || err.message}`,
       api_key: userKey,
     });
   }
