@@ -1,14 +1,18 @@
 /**
- * Server-side API client for the alpha-academic-api on Vercel.
+ * Server-side API client for the Alpha Brain (FastAPI on Vercel).
  *
  * Every request from the UI gets proxied through here so the API key
  * stays on the server (never exposed to the browser).
+ *
+ * Brain 3 note (2026-04-29): synthesis now happens server-side in the
+ * brain (`api/synthesis.py`). The UI no longer makes a direct Anthropic
+ * call — `/api/ask` just proxies to the brain and returns whatever
+ * `data.answer` the brain hands back. This keeps the synthesis prompt,
+ * citation enforcement, and abstention rules in one place.
  */
-import Anthropic from "@anthropic-ai/sdk";
 
 const API_URL = process.env.ALPHA_API_URL ?? "https://alpha-academic-api.vercel.app";
 const API_KEY = process.env.ALPHA_API_KEY ?? "";
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 
 export type MatchedNode = {
   kind: string;
@@ -21,6 +25,13 @@ export type MatchedNode = {
   last_updated: string | null;
   /** AI-generated 1-3 sentence summary; null if not yet summarized */
   summary: string | null;
+  /** Brain 2 provenance fields — populated on every card */
+  slug?: string;
+  source_path?: string | null;
+  source_url?: string | null;
+  content_hash?: string | null;
+  page_number?: number | null;
+  source_tier?: "canonical" | "faq" | "exact" | "fts" | null;
 };
 
 export type MatchedDocument = {
@@ -33,115 +44,88 @@ export type MatchedDocument = {
   content_excerpt: string | null;
   /** AI-generated 1-3 sentence summary; null if not yet summarized */
   summary: string | null;
+  /** Brain 2 provenance fields */
+  kind?: string | null;
+  slug?: string | null;
+  source_path?: string | null;
+  source_url?: string | null;
+  content_hash?: string | null;
+  page_number?: number | null;
+  last_updated?: string | null;
+  source_tier?: "canonical" | "faq" | "exact" | "fts" | null;
+};
+
+/** Confidence label produced by the brain's heuristic. */
+export type ConfidenceLabel = "high" | "medium" | "low";
+
+/**
+ * Brain 3 server-side answer object. Present on `/ask` responses when
+ * `answer_mode != "cards"`. The text is markdown; the UI renders it via
+ * `<SynthesizedAnswer>`.
+ */
+export type AnswerObject = {
+  text: string;
+  abstained: boolean;
+  confidence_label: ConfidenceLabel;
+  /** Source IDs (kind:slug) the LLM cited, AFTER fabrication rejection. */
+  sources_used: string[];
+  review_state: "approved" | "generated" | "needs_dri";
 };
 
 export type AskResponse = {
   query: string;
+  /** Server-side synthesized answer; null when cards-only mode or synthesis failed */
+  answer: AnswerObject | null;
   matched_nodes: MatchedNode[];
   matched_documents: MatchedDocument[];
-  /** AI-synthesized answer in markdown (added by /api/ask after retrieval) */
-  answer?: string;
+  hint?: string;
 };
 
-export async function ask(query: string): Promise<AskResponse> {
+export type AnswerMode = "cards" | "synthesis" | "both";
+
+interface AskOptions {
+  answer_mode?: AnswerMode;
+  min_confidence?: ConfidenceLabel;
+}
+
+export async function ask(
+  query: string,
+  options: AskOptions = {},
+): Promise<AskResponse> {
   if (!API_KEY) {
     throw new Error("ALPHA_API_KEY env var not set on the server");
   }
+  const body: Record<string, unknown> = { query };
+  if (options.answer_mode) body.answer_mode = options.answer_mode;
+  if (options.min_confidence) body.min_confidence = options.min_confidence;
+
   const res = await fetch(`${API_URL}/ask`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Alpha-API-Key": API_KEY,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API ${res.status}: ${text.slice(0, 200)}`);
   }
-  return res.json();
-}
-
-const SYNTHESIS_SYSTEM_PROMPT = `You are the synthesis layer for the Alpha Academic Brain — an internal knowledge base for the Alpha Schools academics team. Your job is to take retrieved entities + supporting documents and write a focused, actionable answer to the user's question.
-
-Rules:
-- Answer ONLY using the retrieved sources below. If the sources don't contain the answer, say so honestly — do not invent or guess.
-- Open with a 1-line direct answer or summary of the situation.
-- Use markdown: short headings (##), bullet lists, emoji prefixes (📚 📄 ✅ ❌ ⚠️ 👤) for scannable sections.
-- Surface the DRI (responsible person) prominently if present in the sources, with their email if available.
-- For procedural questions (PTC calls, proctoring, escalation), give a checklist the reader can follow.
-- For lookup questions (DRIs, policies, links), be terse — just the answer + the source.
-- End with a "📚 Source docs" table listing the doc filenames + Drive links you drew from, if any have real Drive URLs.
-- Keep it tight — the reader is a busy teacher or coach, not a casual reader. No filler.
-- The body of every retrieved entity is verbatim source material — quote/cite it; don't paraphrase facts.`;
-
-interface SynthesisInput {
-  query: string;
-  matched_nodes: MatchedNode[];
-  matched_documents: MatchedDocument[];
-}
-
-/**
- * Take the brain's retrieval output + the user's query and synthesize a
- * coherent markdown answer using Claude. Returns null on any failure so the
- * caller can fall back to showing raw cards.
- */
-export async function synthesize(input: SynthesisInput): Promise<string | null> {
-  if (!ANTHROPIC_KEY) return null;
-  if (!input.matched_nodes.length && !input.matched_documents.length) {
-    return null;
-  }
-
-  const nodesText = input.matched_nodes
-    .slice(0, 5)
-    .map((n, i) => {
-      const dri = n.dri_name
-        ? ` (DRI: ${n.dri_name}${n.dri_email ? ` · ${n.dri_email}` : ""})`
-        : "";
-      const summary = n.summary ? `Summary: ${n.summary}\n` : "";
-      const body = (n.body || n.excerpt || "").slice(0, 1500);
-      return `### Source ${i + 1} — ${n.kind}: ${n.title}${dri}\n${summary}Body:\n${body}`;
-    })
-    .join("\n\n---\n\n");
-
-  const docsText = input.matched_documents
-    .filter((d) => d.has_content && d.content_excerpt)
-    .slice(0, 3)
-    .map((d, i) => {
-      const link = d.drive_url ? ` (Drive: ${d.drive_url})` : "";
-      const summary = d.summary ? `Summary: ${d.summary}\n` : "";
-      return `### Doc ${i + 1} — ${d.filename}${link}\n${summary}Excerpt:\n${(d.content_excerpt || "").slice(0, 1200)}`;
-    })
-    .join("\n\n---\n\n");
-
-  const userMessage = `User's question: ${input.query}
-
-Retrieved sources:
-
-${nodesText}
-
-${docsText ? `Supporting documents:\n\n${docsText}` : ""}
-
-Write the answer now using only what's above.`;
-
-  try {
-    const client = new Anthropic({ apiKey: ANTHROPIC_KEY });
-    const resp = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1500,
-      system: SYNTHESIS_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
-    const block = resp.content[0];
-    if (block && block.type === "text") {
-      return block.text;
-    }
-    return null;
-  } catch {
-    // Synthesis failed — caller falls back to raw cards.
-    return null;
-  }
+  // Older brain deployments don't return `answer`; coerce to null so the
+  // type stays strict on the UI side.
+  const data = (await res.json()) as Partial<AskResponse> & {
+    matched_nodes: MatchedNode[];
+    matched_documents: MatchedDocument[];
+    query: string;
+  };
+  return {
+    query: data.query,
+    answer: data.answer ?? null,
+    matched_nodes: data.matched_nodes ?? [],
+    matched_documents: data.matched_documents ?? [],
+    hint: data.hint,
+  };
 }
 
 export type HealthResponse = {
@@ -177,4 +161,135 @@ export async function logFeedback(payload: {
     cache: "no-store",
   });
   return res.ok;
+}
+
+// --- Reviews (Brain 4) -----------------------------------------------------
+//
+// The brain's `/review` endpoints are per-user-key gated, so the UI proxies
+// every call through these helpers. Each helper picks the right key (the
+// shared ALPHA_API_KEY when the action doesn't need to be attributed to a
+// specific human, OR the user's per-user key when one is provided — the
+// approve/reject/revise flows pass `userApiKey` through).
+
+export type ReviewRecord = {
+  review_id: string;
+  entity_slug: string | null;
+  source_path: string | null;
+  status: "pending" | "approved" | "needs_revision" | "rejected" | "stale";
+  assigned_dri_email: string | null;
+  proposed_answer: string | null;
+  correction: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function reviewsHeaders(userApiKey?: string): Record<string, string> {
+  const key = userApiKey || API_KEY;
+  if (!key) throw new Error("No API key available for /review call");
+  return {
+    "Content-Type": "application/json",
+    "X-Alpha-API-Key": key,
+  };
+}
+
+export async function fetchReview(
+  reviewId: string,
+  userApiKey?: string,
+): Promise<ReviewRecord> {
+  const res = await fetch(
+    `${API_URL}/review/${encodeURIComponent(reviewId)}`,
+    { headers: reviewsHeaders(userApiKey), cache: "no-store" },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`fetchReview ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export async function createReview(
+  body: {
+    entity_slug?: string;
+    source_path?: string;
+    proposed_answer?: string;
+    assigned_dri_email?: string;
+  },
+  userApiKey?: string,
+): Promise<ReviewRecord> {
+  const res = await fetch(`${API_URL}/review`, {
+    method: "POST",
+    headers: reviewsHeaders(userApiKey),
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`createReview ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export async function approveReview(
+  reviewId: string,
+  body: { approved_by_email: string; correction?: string },
+  userApiKey?: string,
+): Promise<ReviewRecord> {
+  const res = await fetch(
+    `${API_URL}/review/${encodeURIComponent(reviewId)}/approve`,
+    {
+      method: "POST",
+      headers: reviewsHeaders(userApiKey),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`approveReview ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export async function rejectReview(
+  reviewId: string,
+  body: { rejected_by_email: string; reason: string },
+  userApiKey?: string,
+): Promise<ReviewRecord> {
+  const res = await fetch(
+    `${API_URL}/review/${encodeURIComponent(reviewId)}/reject`,
+    {
+      method: "POST",
+      headers: reviewsHeaders(userApiKey),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`rejectReview ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export async function requestRevision(
+  reviewId: string,
+  body: { by_email: string; what_to_change: string },
+  userApiKey?: string,
+): Promise<ReviewRecord> {
+  const res = await fetch(
+    `${API_URL}/review/${encodeURIComponent(reviewId)}/needs-revision`,
+    {
+      method: "POST",
+      headers: reviewsHeaders(userApiKey),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`requestRevision ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
 }

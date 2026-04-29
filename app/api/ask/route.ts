@@ -1,9 +1,18 @@
 import { auth } from "@/lib/auth";
-import { ask, synthesize } from "@/lib/api";
+import { ask } from "@/lib/api";
 import { NextResponse } from "next/server";
 
 export const maxDuration = 60;
 
+/**
+ * POST /api/ask
+ *
+ * Thin proxy to the brain's `/ask` endpoint. Synthesis used to live here as
+ * a separate Anthropic SDK call; that moved server-side into the brain
+ * (Brain 3, `api/synthesis.py`) so prompt + citation rules + abstention all
+ * live in one place. We just pass `answer_mode: "both"` so the brain returns
+ * both a synthesized `answer` and the raw cards.
+ */
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.email) {
@@ -20,19 +29,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "query is required" }, { status: 400 });
   }
   try {
-    // 1. Retrieve cards from the brain (keyword search, fast, no LLM).
-    const result = await ask(query);
-
-    // 2. Synthesize a coherent answer from the retrieved cards via Claude.
-    //    Falls back to null if ANTHROPIC_API_KEY isn't configured or the
-    //    call fails — the UI renders raw cards in that case.
-    const answer = await synthesize({
-      query,
-      matched_nodes: result.matched_nodes,
-      matched_documents: result.matched_documents,
-    });
-
-    return NextResponse.json({ ...result, answer: answer ?? undefined });
+    const result = await ask(query, { answer_mode: "both" });
+    return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
       { error: (err as Error).message },

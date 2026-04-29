@@ -1,20 +1,20 @@
 "use client";
 
 /**
- * WriteCanonicalAnswer — Phase 2 STUB component.
+ * WriteCanonicalAnswer (Brain 4 wiring).
  *
  * Surfaces a "write the canonical answer for this question" prompt to a DRI
  * after every AI-synthesized response. When clicked, expands into a form
- * (title + question variants + markdown body) that *will* POST to
- * /api/canonical and create a new `canonical_answer` entity in vault/.
+ * (title + question variants + markdown body) that POSTs to
+ * `/api/canonical`. That route proxies into the brain's `/review` +
+ * `/review/{id}/approve` flow, which (a) records the review row and
+ * (b) materialises a canonical_answer markdown file via
+ * `_materialize_canonical_answer`. See vault/canonical_answers/README.md
+ * for the full schema + retrieval precedence.
  *
- * Today this is a visual stub only:
- *   - Submit is disabled with a "Phase 2 coming next week" tooltip.
- *   - No POST happens (see TODO in handleSubmit).
- *   - Style mirrors LogDecision.tsx / Answer.tsx (bg-white, border-stone-200).
- *
- * Full schema + retrieval precedence are documented in
- * alpha-brain-v2/vault/canonical_answers/README.md.
+ * Phase B (still to come): the markdown file is written to /tmp on
+ * Vercel. A follow-up commits it back to the vault via the GitHub API
+ * so it survives the next deploy.
  */
 
 import { useState } from "react";
@@ -28,35 +28,101 @@ interface WriteCanonicalAnswerProps {
    * match for `question`. Optional because the user can override it.
    */
   suggestedParentSlug?: string;
+  /**
+   * Kind of the parent entity. Defaults to "policy" — a safe choice when
+   * we don't know better, since the brain validates parent_kind values
+   * server-side anyway.
+   */
+  suggestedParentKind?:
+    | "subject"
+    | "policy"
+    | "decision"
+    | "person"
+    | "platform"
+    | "topic"
+    | "campus";
   /** Signed-in user's email — becomes `authored_by` on submit. */
   userEmail: string | null;
 }
 
+type SubmitState =
+  | { kind: "idle" }
+  | { kind: "submitting" }
+  | { kind: "success"; slug: string; reviewId: string }
+  | { kind: "error"; message: string };
+
 export function WriteCanonicalAnswer({
   question,
   suggestedParentSlug,
+  suggestedParentKind = "policy",
   userEmail,
 }: WriteCanonicalAnswerProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [questionVariants, setQuestionVariants] = useState(question);
   const [body, setBody] = useState("");
-
-  // Phase 2 hasn't shipped — submit is locked. Tooltip explains why.
-  const submitDisabled = true;
-  const submitTooltip = "Phase 2 coming next week";
-
-  function handleSubmit() {
-    // TODO: POST to /api/canonical with { title, covers_questions, body,
-    // parent_slug, authored_by }. The API writes the markdown file to
-    // vault/canonical_answers/ and commits via the GitHub API under the DRI's
-    // identity. Indexed on next nightly refresh.
-    return;
-  }
+  const [parentSlug, setParentSlug] = useState(suggestedParentSlug ?? "");
+  const [submitState, setSubmitState] = useState<SubmitState>({ kind: "idle" });
 
   if (!userEmail) {
     // Anonymous users can't author canonical answers — hide the affordance.
     return null;
+  }
+
+  const submitDisabled =
+    submitState.kind === "submitting" ||
+    !title.trim() ||
+    !questionVariants.trim() ||
+    !body.trim() ||
+    !parentSlug.trim();
+
+  async function handleSubmit() {
+    if (submitDisabled) return;
+    setSubmitState({ kind: "submitting" });
+
+    const variants = questionVariants
+      .split("\n")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    if (variants.length === 0) {
+      setSubmitState({
+        kind: "error",
+        message: "At least one question variant is required.",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/canonical", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          covers_questions: variants,
+          body: body.trim(),
+          parent_slug: parentSlug.trim(),
+          parent_kind: suggestedParentKind,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setSubmitState({
+          kind: "error",
+          message: data.error || `HTTP ${res.status}`,
+        });
+        return;
+      }
+      setSubmitState({
+        kind: "success",
+        slug: data.slug,
+        reviewId: data.reviewId,
+      });
+    } catch (err) {
+      setSubmitState({
+        kind: "error",
+        message: (err as Error).message,
+      });
+    }
   }
 
   if (!open) {
@@ -76,6 +142,27 @@ export function WriteCanonicalAnswer({
         <p className="text-xs text-stone-500 mt-1.5">
           You&apos;re the DRI. A 2-minute answer from you replaces the AI&apos;s
           guess for everyone who asks this from now on.
+        </p>
+      </div>
+    );
+  }
+
+  if (submitState.kind === "success") {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 shadow-sm space-y-2">
+        <p className="font-semibold text-emerald-900">
+          ✅ Canonical answer published
+        </p>
+        <p className="text-xs text-emerald-800">
+          Slug: <code className="bg-white px-1 rounded">{submitState.slug}</code>
+          <br />
+          Review id:{" "}
+          <code className="bg-white px-1 rounded">{submitState.reviewId}</code>
+        </p>
+        <p className="text-xs text-emerald-700">
+          The brain has recorded your approval. The markdown file lands in
+          the vault on the next deploy (best-effort write to /tmp on Vercel —
+          see HANDOVER.md for the full git-write Phase B plan).
         </p>
       </div>
     );
@@ -122,6 +209,22 @@ export function WriteCanonicalAnswer({
 
       <label className="block">
         <span className="text-xs font-medium text-stone-700">
+          Parent slug <span className="text-red-600">*</span>
+        </span>
+        <span className="block text-[11px] text-stone-500 mt-0.5">
+          Slug of the existing entity this answer is about (e.g. <code>math-6-8</code>).
+        </span>
+        <input
+          type="text"
+          value={parentSlug}
+          onChange={(e) => setParentSlug(e.target.value)}
+          placeholder={suggestedParentSlug ?? "math-6-8"}
+          className="mt-1 w-full text-sm bg-white border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent font-mono"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-xs font-medium text-stone-700">
           Question variants <span className="text-red-600">*</span>
         </span>
         <span className="block text-[11px] text-stone-500 mt-0.5">
@@ -153,14 +256,11 @@ export function WriteCanonicalAnswer({
         />
       </label>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-900">
-        <strong>Phase 2 not yet live.</strong> The form renders, but submit is
-        locked until the write API ships next week. For now, manual adds to
-        <code className="bg-white px-1 rounded mx-1">
-          vault/canonical_answers/
-        </code>
-        work end-to-end.
-      </div>
+      {submitState.kind === "error" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-900">
+          {submitState.message}
+        </div>
+      )}
 
       <div className="flex gap-2 justify-end pt-2">
         <button
@@ -172,10 +272,11 @@ export function WriteCanonicalAnswer({
         <button
           onClick={handleSubmit}
           disabled={submitDisabled}
-          title={submitTooltip}
           className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Publish canonical answer
+          {submitState.kind === "submitting"
+            ? "Publishing…"
+            : "Publish canonical answer"}
         </button>
       </div>
     </div>
