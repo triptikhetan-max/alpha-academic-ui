@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
 import { auth } from "@/lib/auth";
 import { issueKey } from "@/lib/plugin-keys";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
-const FROM_ADDRESS =
-  process.env.RESEND_FROM ?? "Alpha Academic Brain <onboarding@resend.dev>";
+const GMAIL_USER = process.env.GMAIL_USER ?? "";
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD ?? "";
+const FROM_ADDRESS = GMAIL_USER
+  ? `Tripti Khetan <${GMAIL_USER}>`
+  : "Alpha Academic Brain <noreply@example.com>";
 const ADMIN_CC = process.env.ADMIN_CC ?? "tripti.khetan@trilogy.com";
 
 interface RequestBody {
@@ -123,57 +126,44 @@ export async function POST(request: Request) {
   const recipientName = (session?.user?.name || userEmail.split("@")[0])
     .split(" ")[0];
 
-  // If Resend isn't configured, gracefully degrade: return the key inline
+  // If Gmail SMTP isn't configured, gracefully degrade: return the key inline
   // so we don't fully lock the flow on a missing env var.
-  if (!RESEND_API_KEY) {
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
     return NextResponse.json({
       ok: true,
       mode: "manual",
       message:
-        "Resend not configured. Showing key inline as a fallback — admin should set RESEND_API_KEY.",
-      api_key: userKey, // only shown when Resend is missing
+        "Email isn't configured yet. Showing your key here instead — admin should set GMAIL_USER + GMAIL_APP_PASSWORD.",
+      api_key: userKey,
     });
   }
 
-  // Send via Resend
+  // Send via Gmail SMTP
   try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
       },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [userEmail],
-        cc: [ADMIN_CC],
-        subject: "Your Alpha Academic Brain plugin access",
-        html: installEmailHTML(userKey, recipientName),
-        reply_to: ADMIN_CC,
-      }),
     });
 
-    if (!resp.ok) {
-      // Email failed (most common cause: Resend in test mode, can only send to
-      // the account owner's email until a domain is verified). Fall back to
-      // returning the key inline so the user isn't blocked.
-      const text = await resp.text();
-      const reason = text.slice(0, 200);
-      return NextResponse.json({
-        ok: true,
-        mode: "manual",
-        message: `Email delivery isn't configured yet — showing your key here instead.`,
-        email_error: reason,
-        api_key: userKey,
-      });
-    }
+    const info = await transporter.sendMail({
+      from: FROM_ADDRESS,
+      to: userEmail,
+      cc: ADMIN_CC,
+      replyTo: GMAIL_USER,
+      subject: "Your Alpha Academic Brain plugin access",
+      html: installEmailHTML(userKey, recipientName),
+    });
 
-    const data = (await resp.json()) as { id?: string };
     return NextResponse.json({
       ok: true,
       mode: "auto",
       message: `Email sent to ${userEmail}`,
-      id: data.id,
+      id: info.messageId,
       reason: body.reason ?? null,
     });
   } catch (e) {
