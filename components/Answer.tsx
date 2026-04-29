@@ -154,8 +154,14 @@ export function Answer({
 
   return (
     <div className="space-y-5">
-      {/* WHAT WE KNOW */}
-      <Section icon="📚" title="What we know">
+      {/* SYNTHESIZED ANSWER (when available — from /api/ask via Claude) */}
+      {data.answer && <SynthesizedAnswer answer={data.answer} />}
+
+      {/* WHAT WE KNOW (raw retrieved cards — sources for the answer above) */}
+      <Section
+        icon="📚"
+        title={data.answer ? "Sources" : "What we know"}
+      >
         {data.matched_nodes.slice(0, 2).map((n) => (
           <NodeCard key={`${n.kind}-${n.name}`} node={n} userEmail={userEmail} />
         ))}
@@ -204,6 +210,25 @@ function Section({
         <span>{title}</span>
       </h3>
       <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Renders the AI-synthesized answer at the top of the response. Uses
+ * react-markdown so `##` headings, bullet lists, tables, and emoji-prefixed
+ * lines render properly.
+ */
+function SynthesizedAnswer({ answer }: { answer: string }) {
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
+        <span>🧠</span>
+        <span>Answer</span>
+      </div>
+      <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-table:my-3 prose-th:text-left prose-th:font-medium prose-th:text-stone-600 prose-td:py-1 prose-strong:text-ink prose-a:text-accent prose-a:underline prose-a:underline-offset-2 prose-code:bg-stone-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none">
+        <ReactMarkdown>{answer}</ReactMarkdown>
+      </div>
     </div>
   );
 }
