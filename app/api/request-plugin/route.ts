@@ -168,11 +168,20 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     // Network or unexpected error — still return the key so the user isn't blocked.
+    const err = e as Error & { code?: string; response?: string };
+    console.error("[request-plugin] SMTP send failed:", {
+      message: err.message,
+      code: err.code,
+      response: err.response,
+    });
+    const detail = [err.code, err.message, err.response]
+      .filter(Boolean)
+      .join(" — ");
     return NextResponse.json({
       ok: true,
       mode: "manual",
       message: `Email delivery hit an error — showing your key here instead.`,
-      email_error: (e as Error).message,
+      email_error: detail || err.message,
       api_key: userKey,
     });
   }

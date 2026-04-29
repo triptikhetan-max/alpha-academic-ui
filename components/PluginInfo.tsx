@@ -23,6 +23,7 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [mode, setMode] = useState<"auto" | "manual" | null>(null);
   const [inlineKey, setInlineKey] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   async function requestAccess() {
@@ -44,12 +45,14 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
         mode?: "auto" | "manual";
         error?: string;
         api_key?: string;
+        email_error?: string;
       };
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? `Request failed (${res.status})`);
       }
       setMode(data.mode ?? "manual");
       setInlineKey(data.api_key ?? null);
+      setEmailError(data.email_error ?? null);
       setStatus("sent");
     } catch (e) {
       setErrorMsg((e as Error).message);
@@ -185,6 +188,17 @@ claude
               Don&apos;t share this key externally. If a laptop walks off, ping
               Tripti — keys are rotatable.
             </p>
+
+            {emailError && (
+              <details className="text-[11px] text-stone-500 pt-1">
+                <summary className="cursor-pointer hover:text-stone-700">
+                  Why didn&apos;t the email send? (debug)
+                </summary>
+                <pre className="mt-1.5 bg-stone-100 border border-stone-200 rounded p-2 whitespace-pre-wrap break-all font-mono text-stone-700">
+                  {emailError}
+                </pre>
+              </details>
+            )}
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
