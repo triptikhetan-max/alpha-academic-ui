@@ -149,29 +149,65 @@ export function Answer({
     );
   }
 
-  // The most relevant node tells us "who to contact"
-  const topDri = data.matched_nodes.find((n) => n.dri_name);
+  // Split matched_nodes into FAQs (rendered prominently up top) and the rest
+  // (rendered through the existing card flow). FAQs are pre-baked answers and
+  // should take precedence over both synthesis and raw entity cards.
+  const faqNodes = data.matched_nodes.filter((n) => n.kind === "faq");
+  const nonFaqNodes = data.matched_nodes.filter((n) => n.kind !== "faq");
+  const topFaq = faqNodes[0] ?? null;
+  const relatedFaqs = faqNodes.slice(1);
+
+  // The most relevant node tells us "who to contact" — prefer non-FAQ nodes
+  // since FAQ entities don't carry their own DRI metadata in a useful way.
+  const topDri = nonFaqNodes.find((n) => n.dri_name);
 
   return (
     <div className="space-y-5">
-      {/* SYNTHESIZED ANSWER (when available — from /api/ask via Claude) */}
-      {data.answer && <SynthesizedAnswer answer={data.answer} />}
+      {/* TOP FAQ — pre-baked answer, rendered as the primary response */}
+      {topFaq && <FaqAnswerCard faq={topFaq} userEmail={userEmail} />}
 
-      {/* WHAT WE KNOW (raw retrieved cards — sources for the answer above) */}
-      <Section
-        icon="📚"
-        title={data.answer ? "Sources" : "What we know"}
-      >
-        {data.matched_nodes.slice(0, 2).map((n) => (
-          <NodeCard key={`${n.kind}-${n.name}`} node={n} userEmail={userEmail} />
-        ))}
-        {data.matched_documents
-          .filter((d) => d.has_content && d.content_excerpt)
-          .slice(0, 2)
-          .map((d, i) => (
-            <DocContentQuote key={`${d.filename}-${i}`} doc={d} />
+      {/* SYNTHESIZED ANSWER — shown below FAQ as backup when both are present;
+          relabeled so users know the FAQ above is the canonical answer. */}
+      {data.answer && (
+        <SynthesizedAnswer
+          answer={data.answer}
+          asBackup={!!topFaq}
+        />
+      )}
+
+      {/* RELATED QUESTIONS — other matched FAQ entities beyond the top one */}
+      {relatedFaqs.length > 0 && (
+        <Section icon="❓" title="Related questions">
+          {relatedFaqs.map((n) => (
+            <FaqAnswerCard
+              key={`${n.kind}-${n.name}`}
+              faq={n}
+              userEmail={userEmail}
+              compact
+            />
           ))}
-      </Section>
+        </Section>
+      )}
+
+      {/* WHAT WE KNOW (raw retrieved cards — sources for the answer above).
+          FAQ entities are excluded here since they're rendered above. */}
+      {(nonFaqNodes.length > 0 ||
+        data.matched_documents.some((d) => d.has_content && d.content_excerpt)) && (
+        <Section
+          icon="📚"
+          title={data.answer || topFaq ? "Sources" : "What we know"}
+        >
+          {nonFaqNodes.slice(0, 2).map((n) => (
+            <NodeCard key={`${n.kind}-${n.name}`} node={n} userEmail={userEmail} />
+          ))}
+          {data.matched_documents
+            .filter((d) => d.has_content && d.content_excerpt)
+            .slice(0, 2)
+            .map((d, i) => (
+              <DocContentQuote key={`${d.filename}-${i}`} doc={d} />
+            ))}
+        </Section>
+      )}
 
       {/* WHO TO CONTACT */}
       {topDri && (
@@ -215,20 +251,165 @@ function Section({
 }
 
 /**
- * Renders the AI-synthesized answer at the top of the response. Uses
- * react-markdown so `##` headings, bullet lists, tables, and emoji-prefixed
- * lines render properly.
+ * Renders the AI-synthesized answer. Uses react-markdown so `##` headings,
+ * bullet lists, tables, and emoji-prefixed lines render properly.
+ *
+ * When `asBackup` is true, an FAQ entity above already provided the canonical
+ * answer — relabel this block to make clear it's a fallback synthesis, not
+ * the primary response.
  */
-function SynthesizedAnswer({ answer }: { answer: string }) {
+function SynthesizedAnswer({
+  answer,
+  asBackup = false,
+}: {
+  answer: string;
+  asBackup?: boolean;
+}) {
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
         <span>🧠</span>
-        <span>Answer</span>
+        <span>
+          {asBackup
+            ? "AI synthesis (in case the direct answer above is incomplete)"
+            : "Answer"}
+        </span>
       </div>
       <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-table:my-3 prose-th:text-left prose-th:font-medium prose-th:text-stone-600 prose-td:py-1 prose-strong:text-ink prose-a:text-accent prose-a:underline prose-a:underline-offset-2 prose-code:bg-stone-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none">
         <ReactMarkdown>{answer}</ReactMarkdown>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Featured card for an FAQ entity — pre-baked answer that takes precedence
+ * over AI synthesis. The FAQ's `title` is the question (eyebrow); the body
+ * is the markdown answer rendered with the same prose styling as
+ * `SynthesizedAnswer`.
+ *
+ * Reuses the same /api/feedback flag flow as `NodeCard` (no DRI approval
+ * loop — FAQs are auto-generated, so flagging just goes to the global
+ * feedback log for Tripti to review).
+ */
+function FaqAnswerCard({
+  faq,
+  userEmail,
+  compact = false,
+}: {
+  faq: MatchedNode;
+  userEmail: string | null;
+  compact?: boolean;
+}) {
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagText, setFlagText] = useState("");
+  const [flagSent, setFlagSent] = useState(false);
+
+  const cleanBody = stripFakeMdLinks(
+    cleanContent(stripFrontmatter(faq.body)),
+  );
+
+  async function sendFlag() {
+    if (!flagText.trim()) return;
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message:
+          `[FLAG by ${userEmail || "anonymous"} on faq: "${faq.title}"]\n\n` +
+          flagText,
+        kind: "correction",
+        claude_said: faq.title,
+        source: faq.name,
+        reported_by: userEmail,
+      }),
+    });
+    setFlagSent(true);
+    setFlagText("");
+    setTimeout(() => {
+      setFlagOpen(false);
+      setFlagSent(false);
+    }, 2500);
+  }
+
+  const headerLabel = compact ? "❓ Related question" : "🎯 Direct answer";
+
+  return (
+    <div
+      className={
+        compact
+          ? "bg-white border border-stone-200 rounded-lg p-4"
+          : "bg-white border border-stone-200 rounded-xl p-5 shadow-sm"
+      }
+    >
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent mb-2">
+        <span>{headerLabel}</span>
+      </div>
+
+      {/* The FAQ's title IS the question — show it as a small eyebrow caption
+          above the answer body. */}
+      <p className="text-sm font-medium text-stone-700 mb-3 leading-snug">
+        {faq.title}
+      </p>
+
+      <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-table:my-3 prose-th:text-left prose-th:font-medium prose-th:text-stone-600 prose-td:py-1 prose-strong:text-ink prose-a:text-accent prose-a:underline prose-a:underline-offset-2 prose-code:bg-stone-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none">
+        <ReactMarkdown>{cleanBody}</ReactMarkdown>
+      </div>
+
+      {/* Footer: nightly-generated disclaimer + flag affordance */}
+      <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-[11px] text-stone-400 italic">
+          auto-generated nightly · flag if wrong
+        </p>
+        <button
+          onClick={() => setFlagOpen(!flagOpen)}
+          title="Flag this answer as wrong or out of date"
+          className="text-xs text-stone-400 hover:text-red-600 transition shrink-0"
+        >
+          🚩 Flag
+        </button>
+      </div>
+
+      {flagOpen && (
+        <div className="mt-3 pt-3 border-t border-stone-100">
+          {flagSent ? (
+            <p className="text-xs text-green-700">
+              ✓ Flagged. Tripti reviews on the next refresh.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-stone-600">
+                What&apos;s wrong / what should change?
+              </p>
+              <textarea
+                value={flagText}
+                onChange={(e) => setFlagText(e.target.value)}
+                placeholder="e.g. The answer cites the old DRI — should be Maya as of Apr 15."
+                rows={3}
+                className="w-full text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 outline-none focus:border-accent"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setFlagOpen(false);
+                    setFlagText("");
+                  }}
+                  className="text-xs text-stone-500 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendFlag}
+                  disabled={!flagText.trim()}
+                  className="text-xs bg-ink text-white rounded px-3 py-1.5 hover:bg-stone-800 disabled:opacity-40"
+                >
+                  Flag for review
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
