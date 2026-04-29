@@ -161,10 +161,9 @@ export default async function HomePage() {
               The brain is yours — anyone can improve it
             </h2>
             <p className="text-sm text-stone-700 leading-relaxed">
-              Every entry in the brain is a markdown file in a GitHub repo. You
-              don&apos;t need to install Obsidian or anything else. Edit in the
-              browser, commit, done. Tripti reviews weekly; updates ship every
-              Monday.
+              Every entry is a markdown file in a private GitHub repo, gated by
+              the same SSO. The brain gets smarter the more we use it — every
+              flag, every DRI edit, every new chat thread feeds back in.
             </p>
           </div>
 

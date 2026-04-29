@@ -154,11 +154,18 @@ export async function POST(request: Request) {
     });
 
     if (!resp.ok) {
+      // Email failed (most common cause: Resend in test mode, can only send to
+      // the account owner's email until a domain is verified). Fall back to
+      // returning the key inline so the user isn't blocked.
       const text = await resp.text();
-      return NextResponse.json(
-        { error: `Email send failed: ${text.slice(0, 200)}` },
-        { status: 502 },
-      );
+      const reason = text.slice(0, 200);
+      return NextResponse.json({
+        ok: true,
+        mode: "manual",
+        message: `Email delivery isn't configured yet — showing your key here instead.`,
+        email_error: reason,
+        api_key: userKey,
+      });
     }
 
     const data = (await resp.json()) as { id?: string };
@@ -170,9 +177,13 @@ export async function POST(request: Request) {
       reason: body.reason ?? null,
     });
   } catch (e) {
-    return NextResponse.json(
-      { error: (e as Error).message },
-      { status: 500 },
-    );
+    // Network or unexpected error — still return the key so the user isn't blocked.
+    return NextResponse.json({
+      ok: true,
+      mode: "manual",
+      message: `Email delivery hit an error — showing your key here instead.`,
+      email_error: (e as Error).message,
+      api_key: userKey,
+    });
   }
 }

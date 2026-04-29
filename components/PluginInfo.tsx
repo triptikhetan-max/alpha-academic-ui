@@ -22,6 +22,8 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [mode, setMode] = useState<"auto" | "manual" | null>(null);
+  const [inlineKey, setInlineKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   async function requestAccess() {
     if (!userEmail) {
@@ -41,15 +43,27 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
         ok?: boolean;
         mode?: "auto" | "manual";
         error?: string;
+        api_key?: string;
       };
       if (!res.ok || !data.ok) {
         throw new Error(data.error ?? `Request failed (${res.status})`);
       }
       setMode(data.mode ?? "manual");
+      setInlineKey(data.api_key ?? null);
       setStatus("sent");
     } catch (e) {
       setErrorMsg((e as Error).message);
       setStatus("error");
+    }
+  }
+
+  async function copyToClipboard(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      // ignore — most desktop browsers will succeed
     }
   }
 
@@ -92,31 +106,97 @@ export function PluginInfo({ userEmail }: { userEmail?: string | null }) {
       </div>
 
       {status === "sent" ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800 space-y-1">
-          {mode === "auto" ? (
-            <>
-              <p className="font-semibold">
-                ✓ Email sent to{" "}
-                <code className="bg-white px-1 rounded">{userEmail}</code>.
+        mode === "auto" ? (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800 space-y-1">
+            <p className="font-semibold">
+              ✓ Email sent to{" "}
+              <code className="bg-white px-1 rounded">{userEmail}</code>.
+            </p>
+            <p className="text-green-700">
+              Check your inbox in ~30 sec. The email has your API key + the 4
+              install commands. Reply to it if anything breaks.
+            </p>
+          </div>
+        ) : inlineKey ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-3">
+            <div className="text-amber-900 leading-relaxed">
+              <p className="font-semibold mb-1">
+                ⚠️ Email delivery isn&apos;t fully set up yet — your key is
+                shown below.
               </p>
-              <p className="text-green-700">
-                Check your inbox in ~30 sec. The email has your API key + the 4
-                install commands. Reply to it if anything breaks.
+              <p>
+                Copy it now (it won&apos;t be shown again on reload). Same email
+                always gets the same key, so you can come back here if you lose
+                it.
               </p>
-            </>
-          ) : (
-            <>
-              <p className="font-semibold">
-                ✓ Request logged for{" "}
-                <code className="bg-white px-1 rounded">{userEmail}</code>.
-              </p>
-              <p className="text-green-700">
-                Auto-email isn&apos;t fully wired yet — you&apos;ll get the API
-                key by manual reply within a day.
-              </p>
-            </>
-          )}
-        </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold">
+                  Your API key
+                </span>
+                <button
+                  onClick={() => copyToClipboard(inlineKey, "key")}
+                  className="text-[11px] text-stone-700 hover:text-ink underline underline-offset-2"
+                >
+                  {copied === "key" ? "✓ copied" : "copy"}
+                </button>
+              </div>
+              <pre className="bg-white border border-stone-200 rounded p-2 text-[11px] break-all whitespace-pre-wrap font-mono text-stone-800">
+                {inlineKey}
+              </pre>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold">
+                  Install (4 commands)
+                </span>
+                <button
+                  onClick={() =>
+                    copyToClipboard(
+                      `brew install --cask claude-code\nclaude --add-plugin alpha-academic-remote=triptikhetan-max/alpha-public\nclaude env set ALPHA_API_KEY=${inlineKey}\nclaude`,
+                      "install",
+                    )
+                  }
+                  className="text-[11px] text-stone-700 hover:text-ink underline underline-offset-2"
+                >
+                  {copied === "install" ? "✓ copied" : "copy all"}
+                </button>
+              </div>
+              <pre className="bg-stone-900 text-stone-100 text-[11px] rounded p-2.5 overflow-x-auto leading-relaxed font-mono">
+                {`# 1. Install Claude Code (skip if you already have it):
+brew install --cask claude-code
+
+# 2. Add the plugin:
+claude --add-plugin alpha-academic-remote=triptikhetan-max/alpha-public
+
+# 3. Set your API key:
+claude env set ALPHA_API_KEY=${inlineKey}
+
+# 4. Open Claude Code and try it:
+claude
+> /alpha-academic-remote:ask-alpha-academic who owns Math 6-8`}
+              </pre>
+            </div>
+
+            <p className="text-[11px] text-stone-500 pt-1">
+              Don&apos;t share this key externally. If a laptop walks off, ping
+              Tripti — keys are rotatable.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
+            <p className="font-semibold">
+              ✓ Request logged for{" "}
+              <code className="bg-white px-1 rounded">{userEmail}</code>.
+            </p>
+            <p className="text-green-700">
+              Tripti will reply with your API key shortly.
+            </p>
+          </div>
+        )
       ) : (
         <>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 leading-relaxed">

@@ -224,8 +224,8 @@ export default async function BrainPage() {
                 Tripti to add it as an ADR. The relevant DRI signs off before it goes live.
               </li>
               <li>
-                <strong>Update DRI/policy files directly</strong> (engineers only) — open a PR
-                against the private brain_md repo. CODEOWNERS auto-routes to the right reviewer.
+                <strong>Update DRI/policy files directly</strong> — open a PR against the private
+                brain repo. CODEOWNERS auto-routes to the right reviewer.
               </li>
             </ul>
             <p className="text-xs text-stone-500 mt-3">
