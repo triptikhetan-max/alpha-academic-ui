@@ -1,0 +1,42 @@
+/* ==================== THEME: COOL PAPER ====================
+   Off-white paper · navy ink · single teal accent
+   Calm, institutional, Economist-ish
+   ============================================================ */
+:root,
+[data-theme="cool"] {
+  --bg:           #f4f1ea;   /* warm paper */
+  --panel:        #fbf9f4;   /* slightly lighter */
+  --ink:          #0f2437;   /* deep navy */
+  --ink-soft:     #3a4a5d;
+  --mute:         #5d6470;   /* WCAG AA: ~5.0:1 on #f4f1ea */
+  --faint:        #b8bfc8;
+  --border:       #e0dbd1;
+
+  --accent:       #137a7f;   /* teal */
+  --accent-soft:  #a8d4d6;
+
+  --success:      #2f7a43;
+  --success-soft: #d4e8d9;
+  --warn:         #9b6b1a;
+  --warn-soft:    #f1e3c4;
+  --danger:       #a32d2d;
+  --danger-soft:  #f0d9d9;
+
+  /* tonal palette for level pills / lesson tags / chart series */
+  --tone-brown:   #8a5a2b;
+  --tone-green:   #2f7a43;
+  --tone-plum:    #7a3564;
+  --tone-blue:    #2d5b8a;
+
+  /* chart series palette (up to 8) */
+  --s1: #137a7f;
+  --s2: #9b6b1a;
+  --s3: #2d5b8a;
+  --s4: #a32d2d;
+  --s5: #2f7a43;
+  --s6: #7a3564;
+  --s7: #8a5a2b;
+  --s8: #4a6570;
+
+  --scrim: rgba(15, 36, 55, 0.25);
+}

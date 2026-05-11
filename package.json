@@ -6,17 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync:dashboard": "bash scripts/sync-dashboard-assets.sh",
+    "upload:data": "tsx scripts/upload-data-to-blob.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
+    "@vercel/blob": "^2.3.3",
     "next": "^16.0.0",
     "next-auth": "^5.0.0-beta.25",
     "nodemailer": "^7.0.13",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.0.0",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -26,6 +30,7 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }
 }

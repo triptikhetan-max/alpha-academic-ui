@@ -1,0 +1,39 @@
+/* ==================== THEME: MONO EDITORIAL ====================
+   Pure white · near-black · one saturated accent
+   FT / Stripe / NYT — quiet, confident, typographic
+   ================================================================ */
+[data-theme="mono"] {
+  --bg:           #ffffff;
+  --panel:        #fafafa;
+  --ink:          #111111;
+  --ink-soft:     #333333;
+  --mute:         #5e5e5e;   /* WCAG AA: ~6.4:1 on #ffffff */
+  --faint:        #b5b5b5;
+  --border:       #e5e5e5;
+
+  --accent:       #b8391f;   /* warm vermillion */
+  --accent-soft:  #f1d3cc;
+
+  --success:      #1a6b2e;
+  --success-soft: #d6e8d8;
+  --warn:         #a06415;
+  --warn-soft:    #f0e1c2;
+  --danger:       #b8391f;
+  --danger-soft:  #f1d3cc;
+
+  --tone-brown:   #6b4820;
+  --tone-green:   #1a6b2e;
+  --tone-plum:    #5f2850;
+  --tone-blue:    #1d4d85;
+
+  --s1: #111111;
+  --s2: #b8391f;
+  --s3: #1d4d85;
+  --s4: #1a6b2e;
+  --s5: #a06415;
+  --s6: #5f2850;
+  --s7: #6b4820;
+  --s8: #8a8a8a;
+
+  --scrim: rgba(0, 0, 0, 0.35);
+}

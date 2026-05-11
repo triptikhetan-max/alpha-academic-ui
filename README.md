@@ -105,3 +105,48 @@ Below every answer there's a small "Flag a gap →" link. Teammates click → wr
 - **Per-user analytics**: today the UI uses one shared API key, so the upstream API logs all queries against that key. To get per-user FAQ + gap tracking, the upstream API would need a `reported_by` parameter (small change). Not blocking for the pilot.
 - **The plugin still works**: power users on Claude Code can still install `alpha-academic-remote` from `triptikhetan-max/alpha-public`. The UI and the plugin both call the same API.
 - **Refresh cadence**: nothing in this UI changes when the brain refreshes. The API serves the latest knowledge.db automatically.
+
+---
+
+## Dashboard integration
+
+The Brain Dashboard (Campus Console) is hosted under `/dashboard` as auth-gated pages reusing the same NextAuth Google SSO. Source assets live in the `brain` UI kit on the T7 Shield; copies are synced into `public/dashboard-assets/` and a small bootstrap shim is appended to `render.js` so it fetches data from `/api/dashboard-data` instead of the inlined base64 blob.
+
+### Routes
+
+| Path | Who lands here | Notes |
+|---|---|---|
+| `/dashboard` | Tripti (master) and most DRIs | Master view |
+| `/dashboard/triage` | Claudio | Boots into the `#/triage` hash route |
+| `/api/dashboard-data` | All DRIs | Auth-gated proxy that returns scope-filtered `data.json` |
+
+DRIs are configured in `lib/dri-scopes.ts`. Each entry pins the user to a set of campuses + levels. The API route enforces the filter server-side; the in-browser `render.js` never sees out-of-scope rows.
+
+### Env vars
+
+| Name | Purpose |
+|---|---|
+| `DASHBOARD_DATA_URL` | Vercel Blob URL produced by `npm run upload:data`. Until set, `/api/dashboard-data` returns a `data_pending` envelope and the dashboard renders an onboarding message. |
+| `BLOB_READ_WRITE_TOKEN` | Used only by `npm run upload:data`. Never set this in the deployed app. |
+
+### Sync flow
+
+```bash
+# Re-copy CSS, charts.js, body markup, and the patched render.js from the
+# source UI kit on T7 Shield. Run after every UI kit change.
+npm run sync:dashboard
+
+# Upload the freshly built data.json to Vercel Blob. Run nightly after
+# the brain pipeline regenerates data.json. The cron entry-point is
+# `Work/Alpha/brain/.../daily_refresh.sh`; add a step there:
+#
+#   cd /path/to/alpha-academic-ui && BLOB_READ_WRITE_TOKEN=... npm run upload:data
+#
+# Then copy the printed URL into Vercel as DASHBOARD_DATA_URL.
+BLOB_READ_WRITE_TOKEN=... npm run upload:data
+```
+
+### What does NOT work on first deploy (until the Blob is uploaded)
+
+- `/dashboard` will load the static UI but show a "Data is still being prepared" notice in place of the populated views. This is intentional — the API returns `{ status: "data_pending", … }` when `DASHBOARD_DATA_URL` is unset.
+- After the first `npm run upload:data` run and setting `DASHBOARD_DATA_URL` in Vercel, the dashboard populates normally.

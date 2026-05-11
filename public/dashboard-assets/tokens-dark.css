@@ -1,0 +1,39 @@
+/* ==================== THEME: DARK OPERATIONAL ====================
+   Deep slate · bone text · electric cyan accent
+   Linear / Vercel / Bloomberg terminal-feel
+   ================================================================= */
+[data-theme="dark"] {
+  --bg:           #0c0f14;
+  --panel:        #151a22;
+  --ink:          #e8e6de;   /* bone */
+  --ink-soft:     #b8b5ab;
+  --mute:         #a3a9b3;   /* WCAG AA: ~4.7:1 on #0c0f14 */
+  --faint:        #3f454f;
+  --border:       #232a35;
+
+  --accent:       #5dd3e0;   /* electric cyan */
+  --accent-soft:  rgba(93, 211, 224, 0.2);
+
+  --success:      #7ed46d;
+  --success-soft: rgba(126, 212, 109, 0.15);
+  --warn:         #f0b759;
+  --warn-soft:    rgba(240, 183, 89, 0.18);
+  --danger:       #ff6b6b;
+  --danger-soft:  rgba(255, 107, 107, 0.18);
+
+  --tone-brown:   #c29a6d;
+  --tone-green:   #7ed46d;
+  --tone-plum:    #d084c4;
+  --tone-blue:    #7ba9f5;
+
+  --s1: #5dd3e0;
+  --s2: #f0b759;
+  --s3: #7ba9f5;
+  --s4: #ff6b6b;
+  --s5: #7ed46d;
+  --s6: #d084c4;
+  --s7: #c29a6d;
+  --s8: #8a8fa0;
+
+  --scrim: rgba(0, 0, 0, 0.6);
+}
